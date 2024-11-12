@@ -1,5 +1,8 @@
+//handler
 const userHandler = require('../handler/userHandler');
 const authHandler = require('../handler/authHandler');
+// const {} = require('../handler/pointHandler.js');
+// const {} = require('../handler/wasteCollectionHandler.js');
 
 const routes = [
   {
