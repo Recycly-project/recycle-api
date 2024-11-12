@@ -1,0 +1,31 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+   previewFeatures = ["prismaSchemaFolder"]
+}
+
+model User {
+  id             Int @id @default(autoincrement())
+  email          String @unique
+  username       String @unique
+  password       String
+  fullName       String?
+  address        String?
+  ktp            String?
+  createdAt      DateTime @default(now())
+  wasteCollections WasteCollection[]
+}
+
+model WasteCollection {
+  id         Int @id @default(autoincrement())
+  userId     Int
+  wasteId    Int
+  type       String
+  quantity   Int
+  createdAt  DateTime @default(now())
+  user       User @relation(fields: [userId], references: [id])
+}
