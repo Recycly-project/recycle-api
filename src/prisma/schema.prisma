@@ -5,11 +5,11 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
-   previewFeatures = ["prismaSchemaFolder"]
+  previewFeatures = ["prismaSchemaFolder"]
 }
 
 model User {
-  id             Int @id @default(autoincrement())
+  id             String @id @default(dbgenerated("gen_random_uuid()")) @unique
   email          String @unique
   username       String @unique
   password       String
@@ -18,14 +18,50 @@ model User {
   ktp            String?
   createdAt      DateTime @default(now())
   wasteCollections WasteCollection[]
+  points         Point[]
+  redeems        Redeem[]
 }
 
 model WasteCollection {
   id         Int @id @default(autoincrement())
-  userId     Int
+  userId     String
   wasteId    Int
   type       String
   quantity   Int
+  bottleCode Int
+  pointId    Int?
   createdAt  DateTime @default(now())
   user       User @relation(fields: [userId], references: [id])
+  point      Point? @relation(fields: [pointId], references: [id])
+}
+
+model Point {
+  id         Int @id @default(autoincrement())
+  bottleCode Int
+  type       String
+  point      Int
+  userId     String
+  user       User @relation(fields: [userId], references: [id])
+  wasteCollections WasteCollection[]
+  redeems    Redeem[]
+}
+
+model Redeem {
+  id         Int @id @default(autoincrement())
+  userId     String
+  pointId    Int
+  status     Boolean
+  createdAt  DateTime @default(now())
+  user       User @relation(fields: [userId], references: [id])
+  point      Point @relation(fields: [pointId], references: [id])
+  reward     Reward?
+}
+
+model Reward {
+  id            Int @id @default(autoincrement())
+  redeemId      Int @unique
+  title         String
+  description   String
+  redeemPoint   Int
+  redeem        Redeem @relation(fields: [redeemId], references: [id])
 }

@@ -1,30 +1,7 @@
-//handler
-const userHandler = require('../handler/userHandler');
 const authHandler = require('../handler/authHandler');
-// const {} = require('../handler/pointHandler.js');
-// const {} = require('../handler/wasteCollectionHandler.js');
+const userHandler = require('../handler/userHandler');
 
 const routes = [
-  {
-    method: 'GET',
-    path: '/users',
-    handler: userHandler.getUsersHandler,
-  },
-  {
-    method: 'GET',
-    path: '/users/{id}',
-    handler: userHandler.getUserByIdHandler,
-  },
-  {
-    method: 'PUT',
-    path: '/users/{id}',
-    handler: userHandler.updateUserHandler,
-  },
-  {
-    method: 'DELETE',
-    path: '/users/{id}',
-    handler: userHandler.deleteUserHandler,
-  },
   {
     method: 'POST',
     path: '/users/auth/register',
@@ -39,6 +16,41 @@ const routes = [
     method: 'POST',
     path: '/users/auth/logout',
     handler: authHandler.logoutHandler,
+    options: {
+      pre: [authHandler.verifyToken],
+    },
+  },
+  {
+    method: 'GET',
+    path: '/users',
+    handler: userHandler.getAllUsersHandler,
+    options: {
+      pre: [authHandler.verifyToken],
+    },
+  },
+  {
+    method: 'GET',
+    path: '/users/{id}',
+    handler: userHandler.getUserByIdHandler,
+    options: {
+      pre: [authHandler.verifyToken],
+    },
+  },
+  {
+    method: 'PUT',
+    path: '/users/{id}',
+    handler: userHandler.updateUserHandler,
+    options: {
+      pre: [authHandler.verifyToken],
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/users/{id}',
+    handler: userHandler.deleteUserHandler,
+    options: {
+      pre: [authHandler.verifyToken],
+    },
   },
 ];
 
