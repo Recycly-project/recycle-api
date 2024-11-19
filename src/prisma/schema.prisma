@@ -9,59 +9,45 @@ generator client {
 }
 
 model User {
-  id             String @id @default(dbgenerated("gen_random_uuid()")) @unique
-  email          String @unique
-  username       String @unique
-  password       String
-  fullName       String?
-  address        String?
-  ktp            String?
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @unique
+  email          String   @unique
+  password       String   @db.VarChar
+  fullName       String   @db.VarChar
+  address        String?  @db.VarChar
+  ktp            String?  @db.VarChar 
+  totalPoints    Int      @default(0)
+  role           Boolean  @default(false)
   createdAt      DateTime @default(now())
   wasteCollections WasteCollection[]
-  points         Point[]
   redeems        Redeem[]
 }
 
 model WasteCollection {
-  id         Int @id @default(autoincrement())
-  userId     String
-  wasteId    Int
-  type       String
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @unique
+  userId     String   @map("userld")
   quantity   Int
-  bottleCode Int
-  pointId    Int?
+  isBottle   Boolean 
+  bottleCode String
+  points     Int   
   createdAt  DateTime @default(now())
-  user       User @relation(fields: [userId], references: [id])
-  point      Point? @relation(fields: [pointId], references: [id])
-}
-
-model Point {
-  id         Int @id @default(autoincrement())
-  bottleCode Int
-  type       String
-  point      Int
-  userId     String
-  user       User @relation(fields: [userId], references: [id])
-  wasteCollections WasteCollection[]
-  redeems    Redeem[]
+  user       User     @relation(fields: [userId], references: [id])
 }
 
 model Redeem {
-  id         Int @id @default(autoincrement())
-  userId     String
-  pointId    Int
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @unique
+  userId     String   @map("userld")
+  rewardId   String   @map("rewardId")
   status     Boolean
+  pointsUsed Int      @map("pointsUsed")
   createdAt  DateTime @default(now())
-  user       User @relation(fields: [userId], references: [id])
-  point      Point @relation(fields: [pointId], references: [id])
-  reward     Reward?
+  user       User     @relation(fields: [userId], references: [id])
+  reward     Reward   @relation(fields: [rewardId], references: [id])
 }
 
 model Reward {
-  id            Int @id @default(autoincrement())
-  redeemId      Int @unique
-  title         String
-  description   String
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @unique
+  title         String   @db.VarChar
+  description   String   @db.VarChar
   redeemPoint   Int
-  redeem        Redeem @relation(fields: [redeemId], references: [id])
+  redeems       Redeem[]
 }
