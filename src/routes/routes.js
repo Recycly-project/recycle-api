@@ -1,5 +1,6 @@
 const authHandler = require('../handler/authHandler');
 const userHandler = require('../handler/userHandler');
+const wasteCollectionHandler = require('../handler/wasteCollectionHandler');
 
 const routes = [
   {
@@ -46,6 +47,22 @@ const routes = [
     handler: authHandler.getAllUsersHandler,
     options: {
       pre: [{ method: authHandler.verifyToken }],
+    },
+  },
+  {
+    method: 'POST',
+    path: '/users/{id}/waste-collections',
+    handler: wasteCollectionHandler.createWasteCollectionHandler,
+    options: {
+      pre: [{ method: authHandler.verifyToken, assign: 'auth' }],
+    },
+  },
+  {
+    method: 'GET',
+    path: '/users/{id}/waste-collections',
+    handler: wasteCollectionHandler.getUserWasteCollectionsHandler,
+    options: {
+      pre: [{ method: authHandler.verifyToken, assign: 'auth' }],
     },
   },
 ];

@@ -12,6 +12,7 @@ const getUserByIdHandler = async (request, h) => {
       select: {
         id: true,
         email: true,
+        fullName: true,
         address: true,
         ktp: true,
         totalPoints: true,
@@ -34,12 +35,12 @@ const getUserByIdHandler = async (request, h) => {
 // PUT: Memperbarui profil pengguna
 const updateUserHandler = async (request, h) => {
   const { id } = request.params;
-  const { email, address, ktp } = request.payload;
+  const { email, fullName, address, ktp } = request.payload;
 
   try {
     const updatedUser = await prisma.user.update({
       where: { id: id },
-      data: { email, address, ktp },
+      data: { email, fullName, address, ktp },
     });
 
     return h.response({
@@ -55,10 +56,20 @@ const updateUserHandler = async (request, h) => {
 
 // DELETE: Menghapus profil pengguna
 const deleteUserHandler = async (request, h) => {
-  const { id } = request.params;
+  const { id: userId } = request.params;
 
   try {
-    await prisma.user.delete({ where: { id: id } });
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      return h
+        .response({ status: 'fail', message: 'Pengguna tidak ditemukan' })
+        .code(404);
+    }
+
+    await prisma.wasteCollection.deleteMany({ where: { userId } });
+
+    await prisma.user.delete({ where: { id: userId } });
 
     return h
       .response({ status: 'success', message: 'Pengguna berhasil dihapus' })
