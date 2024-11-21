@@ -1,12 +1,6 @@
-variable "project_id" {
-  description = "Google Cloud Project ID"
-}
-
-variable "region" {
-  description = "Google Cloud Region_ID"
-  default = ""
-}
-
-variable "container_image" {
-  description = "Container image URL"
+variable "project_id" {}
+variable "region" {}
+variable "image_url" {}
+variable "service_name" {
+  default = "backend-service"
 }
