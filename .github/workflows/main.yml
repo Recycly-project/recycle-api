@@ -14,19 +14,25 @@ jobs:
       # Checkout source code
       - name: Checkout code
         uses: actions/checkout@v3
-      
-       # Authenticate to GCP
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+          
 
       # Setup Google Cloud SDK
       - name: Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-          install_components: docker
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      # Install Docker via the system's package manager (apt-get for Ubuntu)
+      - name: Install Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+
+      # Authenticate Docker to GCR (Google Container Registry)
+      - name: Authenticate Docker to GCR
+        run: |
+          gcloud auth configure-docker
 
 
       # Build Docker image
