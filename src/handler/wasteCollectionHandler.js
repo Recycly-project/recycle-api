@@ -1,11 +1,12 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { verifyToken } = require('./authHandler');
+const { predict } = require('../utils/tfModel');
 
 // Handler untuk menambahkan koleksi sampah botol
 const createWasteCollectionHandler = async (request, h) => {
   const { id: userId } = request.params;
-  const { quantity, isBottle, bottleCode, points } = request.payload;
+  const { quantity, isBottle } = request.payload;
 
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -16,7 +17,7 @@ const createWasteCollectionHandler = async (request, h) => {
         .code(404);
     }
 
-    // Validasi apakah isBottle adalah false
+    // Validasi isBottle
     if (!isBottle) {
       return h
         .response({
@@ -26,13 +27,29 @@ const createWasteCollectionHandler = async (request, h) => {
         .code(400);
     }
 
+    // Validasi quantity
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return h
+        .response({
+          status: 'fail',
+          message: 'Jumlah harus berupa angka positif.',
+        })
+        .code(400);
+    }
+
+    // Gunakan TensorFlow.js untuk prediksi (apakah botol atau bukan)
+    const predictedIsBottle = await predict([isBottle]);
+    console.log('Prediksi model:', predictedIsBottle);
+
+    // Hitung poin berdasarkan jumlah dan isBottle
+    const points = predictedIsBottle ? quantity * 1 : 0;
+
     // Tambahkan koleksi ke database
     const newCollection = await prisma.wasteCollection.create({
       data: {
         userId,
         quantity,
-        isBottle,
-        bottleCode,
+        isBottle: predictedIsBottle,
         points,
       },
     });
@@ -77,7 +94,6 @@ const getUserWasteCollectionsHandler = async (request, h) => {
         userId: true,
         quantity: true,
         isBottle: true,
-        bottleCode: true,
         points: true,
         createdAt: true,
       },

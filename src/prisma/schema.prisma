@@ -27,7 +27,6 @@ model WasteCollection {
   userId     String   @map("userld")
   quantity   Int
   isBottle   Boolean 
-  bottleCode String
   points     Int   
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id])
