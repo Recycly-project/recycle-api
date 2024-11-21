@@ -1,15 +1,20 @@
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
 resource "google_cloud_run_service" "backend" {
-  name = "recycly-backend-nodeJs"
+  name     = var.service_name
   location = var.region
 
   template {
     spec {
       containers {
-        image = var.container_image
+        image = var.image_url
         resources {
           limits = {
-            cpu = "1"
-            memory = "512Mi"
+            memory = "256Mi"
+            cpu    = "1"
           }
         }
       }
@@ -17,21 +22,23 @@ resource "google_cloud_run_service" "backend" {
   }
 
   traffic {
-    percent = 100
+    percent         = 100
     latest_revision = true
   }
 }
 
-resource "google_cloud_run_service_iam_policy" "all_users" {
-  location = google_cloud_run_service.backend.location
-  service = google_cloud_run_service.backend.name
-
-  policy_data = data.google_cloud_run_service_iam_policy.all_users.policy_data
-}
-
-data "google_iam_policy" "all_users" {
+resource "google_iam_policy" "noauth" {
   binding {
     role = "roles/run.invoker"
-    members = [ "allUsers" ]
+    members = [
+      "allUsers"
+    ]
   }
+}
+
+resource "google_cloud_run_service_iam_policy" "noauth" {
+  location    = var.region
+  project     = var.project_id
+  service     = google_cloud_run_service.backend.name
+  policy_data = google_iam_policy.noauth.policy_data
 }
