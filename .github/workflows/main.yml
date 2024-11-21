@@ -14,34 +14,24 @@ jobs:
       # Checkout source code
       - name: Checkout code
         uses: actions/checkout@v3
-          
-
-      # Setup Google Cloud SDK
-      - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
         with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+          node-version: '14'
 
-      # Install Docker via the system's package manager (apt-get for Ubuntu)
-      - name: Install Docker
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
-
-      # Authenticate Docker to GCR (Google Container Registry)
-      - name: Authenticate Docker to GCR
-        run: |
-          gcloud auth configure-docker
-
+      - name: Install dependencies
+        run: npm install
 
       # Build Docker image
       - name: Build Docker image
         run: |
           docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/nodejs-backend:latest backend/
 
-      - name: Authenticate Docker to GCR
-        run: echo "${{ secrets.GCP_CREDENTIALS }}" | docker login -u _json_key --password-stdin https://gcr.io
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v0.4.0
+        with:
+          credentials_json: ${{ secrets.GCLOUD_SERVICE_ACCOUNT_KEY }}
 
       # Push Docker image to Google Container Registry
       - name: Push Docker image
