@@ -1,0 +1,56 @@
+name: CI/CD to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy to Cloud Run
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout source code
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # Setup Google Cloud SDK
+    - name: Setup GCP SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        service_account_key: ${{ secrets.GCP_CREDENTIALS }}
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    # Authenticate Docker to push to GCP Container Registry
+    - name: Authenticate Docker
+      run: gcloud auth configure-docker
+
+    # Build Docker Image
+    - name: Build Docker Image
+      run: docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/backend:latest .
+
+    # Push Docker Image to GCR
+    - name: Push Docker Image
+      run: docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/backend:latest
+
+    # Setup Terraform
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.0
+
+    # Initialize Terraform
+    - name: Terraform Init
+      working-directory: terraform/
+      run: terraform init
+
+    # Apply Terraform
+    - name: Terraform Apply
+      working-directory: terraform/
+      env:
+        TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+        TF_VAR_region: ${{ secrets.GCP_REGION }}
+        TF_VAR_image_url: gcr.io/${{ secrets.GCP_PROJECT_ID }}/backend:latest
+        TF_VAR_tf_backend_bucket: ${{ secrets.TF_BACKEND_BUCKET }}
+      run: terraform apply -auto-approve

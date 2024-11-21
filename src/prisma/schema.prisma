@@ -1,0 +1,52 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
+}
+
+model User {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @unique
+  email          String   @unique
+  password       String   @db.VarChar
+  fullName       String   @db.VarChar
+  address        String?  @db.VarChar
+  ktp            String?  @db.VarChar 
+  totalPoints    Int      @default(0)
+  role           Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  wasteCollections WasteCollection[]
+  redeems        Redeem[]
+}
+
+model WasteCollection {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @unique
+  userId     String   @map("userld")
+  quantity   Int
+  isBottle   Boolean 
+  points     Int   
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model Redeem {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @unique
+  userId     String   @map("userld")
+  rewardId   String   @map("rewardId")
+  status     Boolean
+  pointsUsed Int      @map("pointsUsed")
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  reward     Reward   @relation(fields: [rewardId], references: [id])
+}
+
+model Reward {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @unique
+  title         String   @db.VarChar
+  description   String   @db.VarChar
+  redeemPoint   Int
+  redeems       Redeem[]
+}
