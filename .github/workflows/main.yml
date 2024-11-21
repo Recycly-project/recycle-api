@@ -1,4 +1,4 @@
-name: CI/CD to Cloud Run
+name: CI/CD to Google Cloud Run
 
 on:
   push:
@@ -7,50 +7,51 @@ on:
 
 jobs:
   build-and-deploy:
-    name: Build and Deploy to Cloud Run
+    name: Build & Deploy to Cloud Run
     runs-on: ubuntu-latest
 
     steps:
-    # Checkout source code
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      # Checkout source code
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+       # Authenticate to GCP
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
-    # Setup Google Cloud SDK
-    - name: Setup GCP SDK
-      uses: google-github-actions/setup-gcloud@v1
-      with:
-        service_account_key: ${{ secrets.GCP_CREDENTIALS }}
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
+      # Setup Google Cloud SDK
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          install_components: docker
 
-    # Authenticate Docker to push to GCP Container Registry
-    - name: Authenticate Docker
-      run: gcloud auth configure-docker
 
-    # Build Docker Image
-    - name: Build Docker Image
-      run: docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/backend:latest .
+      # Build Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/nodejs-backend:latest backend/
 
-    # Push Docker Image to GCR
-    - name: Push Docker Image
-      run: docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/backend:latest
+      - name: Authenticate Docker to GCR
+        run: echo "${{ secrets.GCP_CREDENTIALS }}" | docker login -u _json_key --password-stdin https://gcr.io
 
-    # Setup Terraform
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
-      with:
-        terraform_version: 1.5.0
+      # Push Docker image to Google Container Registry
+      - name: Push Docker image
+        run: |
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/nodejs-backend:latest
 
-    # Initialize Terraform
-    - name: Terraform Init
-      working-directory: terraform/
-      run: terraform init
+      # Terraform Init
+      - name: Terraform Init
+        run: |
+          terraform -chdir=terraform init
 
-    # Apply Terraform
-    - name: Terraform Apply
-      working-directory: terraform/
-      env:
-        TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
-        TF_VAR_region: ${{ secrets.GCP_REGION }}
-        TF_VAR_image_url: gcr.io/${{ secrets.GCP_PROJECT_ID }}/backend:latest
-        TF_VAR_tf_backend_bucket: ${{ secrets.TF_BACKEND_BUCKET }}
-      run: terraform apply -auto-approve
+      # Terraform Apply
+      - name: Terraform Apply
+        run: |
+          terraform -chdir=terraform apply -auto-approve
+        env:
+          TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+          TF_VAR_region: us-central1
+          TF_VAR_container_image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/nodejs-backend:latest
