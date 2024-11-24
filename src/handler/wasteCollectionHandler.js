@@ -1,14 +1,25 @@
+require('dotenv').config();
+
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const axios = require('axios');
+const FormData = require('form-data');
+const fs = require('fs');
+const path = require('path');
+
 const { verifyToken } = require('./authHandler');
-const { predict } = require('../utils/tfModel');
+
+const prisma = new PrismaClient();
+
+// URL API ML (gunakan environment variable untuk keamanan)
+const ML_API_URL = process.env.ML_API_URL;
 
 // Handler untuk menambahkan koleksi sampah botol
 const createWasteCollectionHandler = async (request, h) => {
   const { id: userId } = request.params;
-  const { quantity, isBottle } = request.payload;
+  const { payload } = request;
 
   try {
+    // Validasi pengguna
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
@@ -17,39 +28,51 @@ const createWasteCollectionHandler = async (request, h) => {
         .code(404);
     }
 
-    // Validasi isBottle
-    if (!isBottle) {
+    // Pastikan file gambar ada dalam request payload
+    if (!payload || !payload.image || !payload.image.path) {
       return h
         .response({
           status: 'fail',
-          message: 'Hanya botol yang dapat diterima untuk koleksi ini.',
+          message: 'Gambar tidak ditemukan dalam permintaan',
         })
         .code(400);
     }
 
-    // Validasi quantity
-    if (!Number.isFinite(quantity) || quantity <= 0) {
+    // Validasi file gambar
+    const absolutePath = path.resolve(payload.image.path);
+    if (!fs.existsSync(absolutePath)) {
       return h
         .response({
           status: 'fail',
-          message: 'Jumlah harus berupa angka positif.',
+          message: 'File gambar tidak ditemukan di server',
         })
         .code(400);
     }
 
-    // Gunakan TensorFlow.js untuk prediksi (apakah botol atau bukan)
-    const predictedIsBottle = await predict([isBottle]);
-    console.log('Prediksi model:', predictedIsBottle);
+    // Kirim gambar ke API ML untuk validasi
+    const formData = new FormData();
+    formData.append('image', fs.createReadStream(absolutePath));
 
-    // Hitung poin berdasarkan jumlah dan isBottle
-    const points = predictedIsBottle ? quantity * 1 : 0;
+    const apiResponse = await axios.post(ML_API_URL, formData, {
+      headers: {
+        ...formData.getHeaders(),
+      },
+    });
 
-    // Tambahkan koleksi ke database
+    const { label, points } = apiResponse.data;
+
+    // Validasi berdasarkan label dari API ML
+    if (label === 'Botol Rusak' || label === 'Bukan Botol') {
+      return h
+        .response({ status: 'fail', message: `Gagal: ${label}` })
+        .code(400);
+    }
+
+    // Simpan data koleksi sampah yang valid ke database
     const newCollection = await prisma.wasteCollection.create({
       data: {
         userId,
-        quantity,
-        isBottle: predictedIsBottle,
+        label,
         points,
       },
     });
@@ -92,8 +115,7 @@ const getUserWasteCollectionsHandler = async (request, h) => {
       select: {
         id: true,
         userId: true,
-        quantity: true,
-        isBottle: true,
+        label: true,
         points: true,
         createdAt: true,
       },

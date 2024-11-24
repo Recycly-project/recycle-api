@@ -13,9 +13,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/cloud-sql-connector": "^1.4.0",
+    "@google-cloud/storage": "^7.14.0",
     "@hapi/hapi": "^21.3.12",
     "@prisma/client": "^5.22.0",
     "@tensorflow/tfjs": "^4.22.0",
+    "axios": "^1.7.7",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
     "jsonwebtoken": "^9.0.2",

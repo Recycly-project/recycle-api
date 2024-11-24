@@ -25,8 +25,7 @@ model User {
 model WasteCollection {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @unique
   userId     String   @map("userld")
-  quantity   Int
-  isBottle   Boolean 
+  label      String
   points     Int   
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id])
