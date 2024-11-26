@@ -1,13 +1,13 @@
 FROM node:18-alpine AS base
 
-WORKDIR /usr/src/
+WORKDIR /usr/src/app
 
-COPY package*.json ./
+COPY package.json .
 
 RUN npm install
 
 COPY . .
 
-EXPOSE 3000
+EXPOSE 8080
 
-CMD [ "node", "server.js" ]
+CMD npm run start-prod
