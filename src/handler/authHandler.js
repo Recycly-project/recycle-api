@@ -102,11 +102,6 @@ const loginHandler = async (request, h) => {
       }
     );
 
-    console.log('Generated Token Payload:', {
-      userId: user.id,
-      role: user.role,
-    });
-
     return h
       .response({
         status: 'success',
