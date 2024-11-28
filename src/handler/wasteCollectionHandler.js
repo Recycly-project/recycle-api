@@ -29,7 +29,7 @@ const createWasteCollectionHandler = async (request, h) => {
     }
 
     // Pastikan file gambar ada dalam request payload
-    if (!payload || !payload.image || !payload.image.path) {
+    if (!payload || !payload.image) {
       return h
         .response({
           status: 'fail',
@@ -38,25 +38,29 @@ const createWasteCollectionHandler = async (request, h) => {
         .code(400);
     }
 
-    // Validasi file gambar
-    const absolutePath = path.resolve(payload.image.path);
-    if (!fs.existsSync(absolutePath)) {
-      return h
-        .response({
-          status: 'fail',
-          message: 'File gambar tidak ditemukan di server',
-        })
-        .code(400);
+    const uploadDir = path.resolve(__dirname, 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
+
+    const tempPath = path.join(
+      uploadDir,
+      `${Date.now()}-${payload.image.hapi.filename}`
+    );
+    const writeStream = fs.createWriteStream(tempPath);
+
+    await new Promise((resolve, reject) => {
+      payload.image.pipe(writeStream);
+      payload.image.on('end', resolve);
+      payload.image.on('error', reject);
+    });
 
     // Kirim gambar ke API ML untuk validasi
     const formData = new FormData();
-    formData.append('image', fs.createReadStream(absolutePath));
+    formData.append('image', fs.createReadStream(tempPath));
 
     const apiResponse = await axios.post(ML_API_URL, formData, {
-      headers: {
-        ...formData.getHeaders(),
-      },
+      headers: formData.getHeaders(),
     });
 
     const { label, points } = apiResponse.data;
@@ -74,6 +78,7 @@ const createWasteCollectionHandler = async (request, h) => {
         userId,
         label,
         points,
+        image: tempPath,
       },
     });
 
@@ -117,6 +122,7 @@ const getUserWasteCollectionsHandler = async (request, h) => {
         userId: true,
         label: true,
         points: true,
+        image: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },

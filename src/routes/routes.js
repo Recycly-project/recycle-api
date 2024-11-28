@@ -54,6 +54,11 @@ const routes = [
     path: '/users/{id}/waste-collections',
     handler: wasteCollectionHandler.createWasteCollectionHandler,
     options: {
+      payload: {
+        output: 'stream', // Untuk mendukung file upload
+        parse: true,
+        multipart: true,
+      },
       pre: [{ method: authHandler.verifyToken, assign: 'auth' }],
     },
   },

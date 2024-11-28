@@ -27,6 +27,7 @@ model WasteCollection {
   userId     String   @map("userld")
   label      String
   points     Int   
+  image      String   @db.VarChar
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id])
 }
