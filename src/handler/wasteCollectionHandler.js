@@ -4,16 +4,28 @@ const { PrismaClient } = require('@prisma/client');
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const path = require('path');
-
 const { verifyToken } = require('./authHandler');
 
 const prisma = new PrismaClient();
 
-// URL API ML (gunakan environment variable untuk keamanan)
+// URL API ML
 const ML_API_URL = process.env.ML_API_URL;
 
-// Handler untuk menambahkan koleksi sampah botol
+// Fungsi untuk mengirim gambar ke API ML
+const sendImageToML = async (imagePath) => {
+  const formData = new FormData();
+  formData.append('image', fs.createReadStream(imagePath));
+
+  const apiResponse = await axios.post(ML_API_URL, formData, {
+    headers: formData.getHeaders(),
+  });
+
+  return apiResponse.data;
+};
+
+// Fungsi untuk menangani koleksi sampah botol
 const createWasteCollectionHandler = async (request, h) => {
   const { id: userId } = request.params;
   const { payload } = request;
@@ -21,14 +33,13 @@ const createWasteCollectionHandler = async (request, h) => {
   try {
     // Validasi pengguna
     const user = await prisma.user.findUnique({ where: { id: userId } });
-
     if (!user) {
       return h
         .response({ status: 'fail', message: 'Pengguna tidak ditemukan' })
         .code(404);
     }
 
-    // Pastikan file gambar ada dalam request payload
+    // Pastikan file gambar ada dalam payload
     if (!payload || !payload.image) {
       return h
         .response({
@@ -38,79 +49,81 @@ const createWasteCollectionHandler = async (request, h) => {
         .code(400);
     }
 
-    const uploadDir = path.resolve(__dirname, 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
+    // Simpan gambar sementara
     const tempPath = path.join(
-      uploadDir,
+      __dirname,
+      'uploads',
       `${Date.now()}-${payload.image.hapi.filename}`
     );
-    const writeStream = fs.createWriteStream(tempPath);
+    await fsPromises.writeFile(tempPath, payload.image._data);
 
-    await new Promise((resolve, reject) => {
-      payload.image.pipe(writeStream);
-      payload.image.on('end', resolve);
-      payload.image.on('error', reject);
-    });
+    // Validasi file sementara
+    const stats = await fsPromises.stat(tempPath);
+    if (stats.size === 0) {
+      return h
+        .response({
+          status: 'fail',
+          message: 'File gambar sementara tidak valid.',
+        })
+        .code(500);
+    }
 
     // Kirim gambar ke API ML untuk validasi
-    const formData = new FormData();
-    formData.append('image', fs.createReadStream(tempPath));
+    const { label, points } = await sendImageToML(tempPath);
 
-    const apiResponse = await axios.post(ML_API_URL, formData, {
-      headers: formData.getHeaders(),
-    });
-
-    const { label, points } = apiResponse.data;
-
-    // Validasi berdasarkan label dari API ML
+    // Validasi label dari API ML
     if (label === 'Botol Rusak' || label === 'Bukan Botol') {
+      await fsPromises.unlink(tempPath); // Hapus file sementara
       return h
-        .response({ status: 'fail', message: `Gagal: ${label}` })
+        .response({
+          status: 'fail',
+          message:
+            label === 'Botol Rusak'
+              ? 'Gambar ditolak karena botol dalam kondisi rusak.'
+              : 'Gambar ditolak karena bukan botol.',
+        })
         .code(400);
     }
 
-    // Simpan data koleksi sampah yang valid ke database
-    const newCollection = await prisma.wasteCollection.create({
+    // Kirim respons sukses
+    const response = h
+      .response({
+        status: 'success',
+        message: 'Koleksi recycle berhasil divalidasi dan ditambahkan',
+      })
+      .code(201);
+
+    // Proses penyimpanan gambar secara asinkron
+    const fileBuffer = await fsPromises.readFile(tempPath); // Konversi gambar ke buffer
+    await fsPromises.unlink(tempPath); // Hapus file sementara setelah buffer dibuat
+
+    // Simpan ke database dan update totalPoints pengguna
+    await prisma.wasteCollection.create({
       data: {
         userId,
         label,
         points,
-        image: tempPath,
+        image: fileBuffer,
       },
     });
 
-    // Update totalPoints pengguna
     await prisma.user.update({
       where: { id: userId },
       data: {
-        totalPoints: {
-          increment: points,
-        },
+        totalPoints: { increment: points },
       },
     });
 
-    return h
-      .response({
-        status: 'success',
-        message: 'Koleksi sampah berhasil ditambahkan',
-        data: { wasteCollection: newCollection },
-      })
-      .code(201);
+    return response;
   } catch (error) {
     console.error('Error in createWasteCollectionHandler:', error);
     return h
-      .response({
-        status: 'error',
-        message: 'Terjadi kesalahan pada server',
-      })
+      .response({ status: 'error', message: 'Terjadi kesalahan pada server' })
       .code(500);
   }
 };
 
-// Handler untuk mendapatkan daftar koleksi botol pengguna
+// Fungsi untuk mendapatkan daftar koleksi botol pengguna
 const getUserWasteCollectionsHandler = async (request, h) => {
   const { id: userId } = request.params;
 
@@ -128,20 +141,23 @@ const getUserWasteCollectionsHandler = async (request, h) => {
       orderBy: { createdAt: 'desc' },
     });
 
+    // Konversi gambar ke Base64
+    const formattedCollections = wasteCollections.map((collection) => ({
+      ...collection,
+      image: collection.image.toString('base64'), // Konversi ke Base64
+    }));
+
     return h
       .response({
         status: 'success',
         message: 'Daftar koleksi berhasil diambil',
-        data: { wasteCollections },
+        data: { wasteCollections: formattedCollections },
       })
       .code(200);
   } catch (error) {
     console.error('Error in getUserWasteCollectionsHandler:', error);
     return h
-      .response({
-        status: 'error',
-        message: 'Terjadi kesalahan pada server',
-      })
+      .response({ status: 'error', message: 'Terjadi kesalahan pada server' })
       .code(500);
   }
 };

@@ -14,9 +14,9 @@ model User {
   password       String   @db.VarChar
   fullName       String   @db.VarChar
   address        String?  @db.VarChar
-  ktp            String?  @db.VarChar 
+  ktp            Bytes? 
   totalPoints    Int      @default(0)
-  role           Boolean  @default(false)
+  isAdmin           Boolean  @default(false)
   createdAt      DateTime @default(now())
   wasteCollections WasteCollection[]
   redeems        Redeem[]
@@ -27,7 +27,7 @@ model WasteCollection {
   userId     String   @map("userld")
   label      String
   points     Int   
-  image      String   @db.VarChar
+  image      Bytes
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id])
 }

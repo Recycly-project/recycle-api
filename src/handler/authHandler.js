@@ -23,7 +23,7 @@ const verifyToken = (request, h) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    request.auth = { userId: decoded.id, role: decoded.role };
+    request.auth = { userId: decoded.id, isAdmin: decoded.isAdmin };
 
     return h.continue;
   } catch (error) {
@@ -40,9 +40,11 @@ const verifyToken = (request, h) => {
 
 // Handler untuk registrasi pengguna
 const registerHandler = async (request, h) => {
-  const { email, password, fullName, address, ktp, role } = request.payload;
+  const { email, password, fullName, address, isAdmin } = request.payload;
+  const file = request.payload.ktp; // Mendapatkan file KTP dari payload
 
   try {
+    // Cek apakah email sudah digunakan
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return h
@@ -50,15 +52,24 @@ const registerHandler = async (request, h) => {
         .code(409);
     }
 
+    // Proses hashing password
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Validasi dan konversi file KTP ke buffer (jika ada)
+    let ktpBuffer = null;
+    if (file && file._data) {
+      ktpBuffer = file._data; // Hapi.js menempatkan file upload di `_data`
+    }
+
+    // Simpan user baru di database
     const newUser = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         fullName,
         address,
-        ktp,
-        role: role !== undefined ? role : false,
+        ktp: ktpBuffer, // Menyimpan file KTP dalam bentuk buffer
+        isAdmin: isAdmin !== undefined ? isAdmin : false,
       },
     });
 
@@ -95,7 +106,7 @@ const loginHandler = async (request, h) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, role: user.role },
+      { userId: user.id, isAdmin: user.isAdmin },
       process.env.JWT_SECRET,
       {
         expiresIn: '1h',
@@ -115,12 +126,51 @@ const loginHandler = async (request, h) => {
   }
 };
 
-// GET: Mendapatkan daftar pengguna untuk admin
-const getAllUsersHandler = async (request, h) => {
-  // const { role } = request.auth;
-  // console.log('User Role:', role);
+// Handler untuk update KTP
+const updateKtpHandler = async (request, h) => {
+  const { id } = request.params; // Mendapatkan ID pengguna dari URL
+  const file = request.payload.ktp; // Mendapatkan file KTP dari payload
 
-  // if (!role || role !== true) {
+  try {
+    // Validasi apakah user ada
+    const existingUser = await prisma.user.findUnique({ where: { id } });
+    if (!existingUser) {
+      return h
+        .response({ status: 'fail', message: 'Pengguna tidak ditemukan' })
+        .code(404);
+    }
+
+    // Validasi file KTP dan konversi ke buffer
+    let ktpBuffer = null;
+    if (file && file._data) {
+      ktpBuffer = file._data;
+    } else {
+      return h
+        .response({ status: 'fail', message: 'File KTP tidak valid' })
+        .code(400);
+    }
+
+    // Perbarui KTP di database
+    await prisma.user.update({
+      where: { id },
+      data: { ktp: ktpBuffer },
+    });
+
+    return h
+      .response({ status: 'success', message: 'KTP berhasil diperbarui' })
+      .code(200);
+  } catch (error) {
+    console.error('Error in updateKtpHandler:', error);
+    return h.response({ status: 'error', message: 'Server error' }).code(500);
+  }
+};
+
+// Handler Mendapatkan daftar pengguna untuk admin
+const getAllUsersHandler = async (request, h) => {
+  // const { isAdmin } = request.auth;
+  // console.log('User isAdmin:', isAdmin);
+
+  // if (!isAdmin || isAdmin !== true) {
   //   return h
   //     .response({
   //       status: 'fail',
@@ -138,7 +188,7 @@ const getAllUsersHandler = async (request, h) => {
         address: true,
         ktp: true,
         totalPoints: true,
-        role: true,
+        isAdmin: true,
       },
     });
 
@@ -177,6 +227,7 @@ const logoutHandler = async (request, h) => {
 module.exports = {
   registerHandler,
   loginHandler,
+  updateKtpHandler,
   getAllUsersHandler,
   logoutHandler,
   verifyToken,
