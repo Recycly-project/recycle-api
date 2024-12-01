@@ -7,6 +7,15 @@ const routes = [
     method: 'POST',
     path: '/auth/register',
     handler: authHandler.registerHandler,
+    options: {
+      payload: {
+        output: 'stream',
+        parse: true,
+        multipart: true,
+        maxBytes: 2 * 1024 * 1024,
+        allow: 'multipart/form-data',
+      },
+    },
   },
   { method: 'POST', path: '/auth/login', handler: authHandler.loginHandler },
   {
@@ -14,6 +23,21 @@ const routes = [
     path: '/auth/logout',
     handler: authHandler.logoutHandler,
     options: {
+      pre: [{ method: authHandler.verifyToken, assign: 'auth' }],
+    },
+  },
+  {
+    method: 'PUT',
+    path: '/users/{id}/verify',
+    handler: authHandler.updateKtpHandler,
+    options: {
+      payload: {
+        output: 'stream',
+        parse: true,
+        multipart: true,
+        maxBytes: 2 * 1024 * 1024,
+        allow: 'multipart/form-data',
+      },
       pre: [{ method: authHandler.verifyToken, assign: 'auth' }],
     },
   },
@@ -55,9 +79,10 @@ const routes = [
     handler: wasteCollectionHandler.createWasteCollectionHandler,
     options: {
       payload: {
-        output: 'stream', // Untuk mendukung file upload
+        output: 'stream',
         parse: true,
         multipart: true,
+        maxBytes: 2 * 1024 * 1024,
       },
       pre: [{ method: authHandler.verifyToken, assign: 'auth' }],
     },
