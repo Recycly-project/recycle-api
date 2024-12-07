@@ -113,11 +113,18 @@ const loginHandler = async (request, h) => {
       }
     );
 
+    // Exclude sensitive fields from the response
+    const {
+      // eslint-disable-next-line no-unused-vars
+      password: _,
+      ...userData
+    } = user;
+
     return h
       .response({
         status: 'success',
         message: 'Login berhasil',
-        data: { token },
+        data: { token, user: userData },
       })
       .code(200);
   } catch (error) {
