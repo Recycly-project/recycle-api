@@ -2,8 +2,9 @@ require('dotenv').config();
 
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
 const jwt = require('jsonwebtoken');
+
+const prisma = new PrismaClient();
 
 // Middleware untuk verifikasi token
 const verifyToken = (request, h) => {
@@ -23,15 +24,15 @@ const verifyToken = (request, h) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    request.auth = { userId: decoded.id, isAdmin: decoded.isAdmin };
+    request.auth = { userId: decoded.userId, isAdmin: decoded.isAdmin };
 
     return h.continue;
   } catch (error) {
-    console.error('Error in verifyToken:', error);
+    console.error('Error in verifyToken:', error.message);
     return h
       .response({
         status: 'fail',
-        message: 'Token tidak valid',
+        message: 'Token tidak valid atau telah kedaluwarsa',
       })
       .code(403)
       .takeover();
@@ -41,10 +42,9 @@ const verifyToken = (request, h) => {
 // Handler untuk registrasi pengguna
 const registerHandler = async (request, h) => {
   const { email, password, fullName, address, isAdmin } = request.payload;
-  const file = request.payload.ktp; // Mendapatkan file KTP dari payload
+  const file = request.payload.ktp;
 
   try {
-    // Cek apakah email sudah digunakan
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return h
@@ -52,24 +52,21 @@ const registerHandler = async (request, h) => {
         .code(409);
     }
 
-    // Proses hashing password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Validasi dan konversi file KTP ke buffer (jika ada)
     let ktpBuffer = null;
+
     if (file && file._data) {
-      ktpBuffer = file._data; // Hapi.js menempatkan file upload di `_data`
+      ktpBuffer = file._data;
     }
 
-    // Simpan user baru di database
     const newUser = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         fullName,
         address,
-        ktp: ktpBuffer, // Menyimpan file KTP dalam bentuk buffer
-        isAdmin: isAdmin !== undefined ? isAdmin : false,
+        ktp: ktpBuffer,
+        isAdmin: isAdmin || false,
       },
     });
 
@@ -81,8 +78,13 @@ const registerHandler = async (request, h) => {
       })
       .code(201);
   } catch (error) {
-    console.error('Error in registerHandler:', error);
-    return h.response({ status: 'error', message: 'Server error' }).code(500);
+    console.error('Error in registerHandler:', error.message);
+    return h
+      .response({
+        status: 'error',
+        message: 'Terjadi kesalahan pada server. Silakan coba lagi.',
+      })
+      .code(500);
   }
 };
 
@@ -108,38 +110,41 @@ const loginHandler = async (request, h) => {
     const token = jwt.sign(
       { userId: user.id, isAdmin: user.isAdmin },
       process.env.JWT_SECRET,
-      {
-        expiresIn: '1h',
-      }
+      { expiresIn: '1h' }
     );
-
-    // Exclude sensitive fields from the response
-    const {
-      // eslint-disable-next-line no-unused-vars
-      password: _,
-      ...userData
-    } = user;
 
     return h
       .response({
         status: 'success',
         message: 'Login berhasil',
-        data: { token, user: userData },
+        data: {
+          token,
+          user: {
+            id: user.id,
+            email: user.email,
+            fullName: user.fullName,
+            isAdmin: user.isAdmin,
+          },
+        },
       })
       .code(200);
   } catch (error) {
-    console.error('Error in loginHandler:', error);
-    return h.response({ status: 'error', message: 'Server error' }).code(500);
+    console.error('Error in loginHandler:', error.message);
+    return h
+      .response({
+        status: 'error',
+        message: 'Terjadi kesalahan pada server. Silakan coba lagi.',
+      })
+      .code(500);
   }
 };
 
 // Handler untuk update KTP
 const updateKtpHandler = async (request, h) => {
-  const { id } = request.params; // Mendapatkan ID pengguna dari URL
-  const file = request.payload.ktp; // Mendapatkan file KTP dari payload
+  const { id } = request.params;
+  const file = request.payload.ktp;
 
   try {
-    // Validasi apakah user ada
     const existingUser = await prisma.user.findUnique({ where: { id } });
     if (!existingUser) {
       return h
@@ -147,59 +152,47 @@ const updateKtpHandler = async (request, h) => {
         .code(404);
     }
 
-    // Validasi file KTP dan konversi ke buffer
-    let ktpBuffer = null;
-    if (file && file._data) {
-      ktpBuffer = file._data;
-    } else {
+    if (!file || !file._data) {
       return h
         .response({ status: 'fail', message: 'File KTP tidak valid' })
         .code(400);
     }
 
-    // Perbarui KTP di database
     await prisma.user.update({
       where: { id },
-      data: { ktp: ktpBuffer },
+      data: { ktp: file._data },
     });
 
     return h
-      .response({ status: 'success', message: 'KTP berhasil diperbarui' })
+      .response({
+        status: 'success',
+        message: 'KTP berhasil diperbarui',
+      })
       .code(200);
   } catch (error) {
-    console.error('Error in updateKtpHandler:', error);
-    return h.response({ status: 'error', message: 'Server error' }).code(500);
+    console.error('Error in updateKtpHandler:', error.message);
+    return h
+      .response({
+        status: 'error',
+        message: 'Terjadi kesalahan pada server. Silakan coba lagi.',
+      })
+      .code(500);
   }
 };
 
-// Handler Mendapatkan daftar pengguna untuk admin
+// Handler untuk mendapatkan daftar pengguna
 const getAllUsersHandler = async (request, h) => {
-  // const { isAdmin } = request.auth;
-  // console.log('User isAdmin:', isAdmin);
-
-  // if (!isAdmin || isAdmin !== true) {
-  //   return h
-  //     .response({
-  //       status: 'fail',
-  //       message: 'Akses ditolak, hanya admin yang dapat mengakses',
-  //     })
-  //     .code(403);
-  // }
-
   try {
     const users = await prisma.user.findMany({
       select: {
         id: true,
         email: true,
         fullName: true,
-        address: true,
-        ktp: true,
         totalPoints: true,
         isAdmin: true,
       },
     });
 
-    // Jika tidak ada pengguna, beri status yang sesuai
     if (users.length === 0) {
       return h
         .response({
@@ -217,14 +210,17 @@ const getAllUsersHandler = async (request, h) => {
       })
       .code(200);
   } catch (error) {
-    console.error('Error in getAllUsersHandler:', error);
+    console.error('Error in getAllUsersHandler:', error.message);
     return h
-      .response({ status: 'error', message: 'Terjadi kesalahan pada server' })
+      .response({
+        status: 'error',
+        message: 'Terjadi kesalahan pada server. Silakan coba lagi.',
+      })
       .code(500);
   }
 };
 
-// Handler untuk logout pengguna
+// Handler untuk logout
 const logoutHandler = async (request, h) => {
   return h
     .response({ status: 'success', message: 'Logout berhasil' })

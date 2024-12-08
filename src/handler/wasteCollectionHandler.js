@@ -25,7 +25,7 @@ const sendImageToML = async (imagePath) => {
   return apiResponse.data;
 };
 
-// Fungsi untuk menangani koleksi sampah botol
+// Handler untuk menangani koleksi sampah botol
 const createWasteCollectionHandler = async (request, h) => {
   const { id: userId } = request.params;
   const { payload } = request;
@@ -35,11 +35,14 @@ const createWasteCollectionHandler = async (request, h) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       return h
-        .response({ status: 'fail', message: 'Pengguna tidak ditemukan' })
+        .response({
+          status: 'fail',
+          message: 'Pengguna tidak ditemukan',
+        })
         .code(404);
     }
 
-    // Pastikan file gambar ada dalam payload
+    // Validasi file gambar
     if (!payload || !payload.image) {
       return h
         .response({
@@ -57,17 +60,6 @@ const createWasteCollectionHandler = async (request, h) => {
     );
     await fsPromises.writeFile(tempPath, payload.image._data);
 
-    // Validasi file sementara
-    const stats = await fsPromises.stat(tempPath);
-    if (stats.size === 0) {
-      return h
-        .response({
-          status: 'fail',
-          message: 'File gambar sementara tidak valid.',
-        })
-        .code(500);
-    }
-
     // Kirim gambar ke API ML untuk validasi
     const { label, points } = await sendImageToML(tempPath);
 
@@ -81,15 +73,16 @@ const createWasteCollectionHandler = async (request, h) => {
             label === 'Botol Rusak'
               ? 'Gambar ditolak karena botol dalam kondisi rusak.'
               : 'Gambar ditolak karena bukan botol.',
+          data: { label },
         })
         .code(400);
     }
 
-    // Kirim respons sukses
+    // Kirim respons sukses awal
     const response = h
       .response({
         status: 'success',
-        message: 'Koleksi recycle berhasil divalidasi dan ditambahkan',
+        message: 'Gambar berhasil divalidasi. Proses penyimpanan berhasil.',
       })
       .code(201);
 
@@ -118,12 +111,16 @@ const createWasteCollectionHandler = async (request, h) => {
   } catch (error) {
     console.error('Error in createWasteCollectionHandler:', error);
     return h
-      .response({ status: 'error', message: 'Terjadi kesalahan pada server' })
+      .response({
+        status: 'error',
+        message: 'Terjadi kesalahan pada server. Silakan coba lagi.',
+        error: error.message,
+      })
       .code(500);
   }
 };
 
-// Fungsi untuk mendapatkan daftar koleksi botol pengguna
+// Handler untuk mendapatkan daftar koleksi botol pengguna
 const getUserWasteCollectionsHandler = async (request, h) => {
   const { id: userId } = request.params;
 
@@ -150,14 +147,18 @@ const getUserWasteCollectionsHandler = async (request, h) => {
     return h
       .response({
         status: 'success',
-        message: 'Daftar koleksi berhasil diambil',
+        message: 'Daftar koleksi berhasil diambil.',
         data: { wasteCollections: formattedCollections },
       })
       .code(200);
   } catch (error) {
     console.error('Error in getUserWasteCollectionsHandler:', error);
     return h
-      .response({ status: 'error', message: 'Terjadi kesalahan pada server' })
+      .response({
+        status: 'error',
+        message: 'Terjadi kesalahan pada server. Silakan coba lagi.',
+        error: error.message,
+      })
       .code(500);
   }
 };
