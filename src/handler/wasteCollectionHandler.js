@@ -13,6 +13,12 @@ const prisma = new PrismaClient();
 // URL API ML
 const ML_API_URL = process.env.ML_API_URL;
 
+// Direktori sementara untuk menyimpan file
+const tempDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir);
+}
+
 // Fungsi untuk mengirim gambar ke API ML
 const sendImageToML = async (imagePath) => {
   const formData = new FormData();
