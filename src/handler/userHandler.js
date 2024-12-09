@@ -53,6 +53,13 @@ const updateUserHandler = async (request, h) => {
   const { email, fullName, address, ktp } = request.payload;
 
   try {
+    const existingUser = await prisma.user.findUnique({ where: { id } });
+    if (!existingUser) {
+      return h
+        .response({ status: 'fail', message: 'Pengguna tidak ditemukan' })
+        .code(404);
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: id },
       data: { email, fullName, address, ktp },
@@ -92,6 +99,9 @@ const deleteUserHandler = async (request, h) => {
         })
         .code(404);
     }
+
+    // Hapus data terkait di tabel Redeem
+    await prisma.redeem.deleteMany({ where: { userId } });
 
     // Hapus data terkait pengguna (waste collections)
     await prisma.wasteCollection.deleteMany({ where: { userId } });

@@ -131,6 +131,16 @@ const getUserWasteCollectionsHandler = async (request, h) => {
   const { id: userId } = request.params;
 
   try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return h
+        .response({
+          status: 'fail',
+          message: 'Pengguna tidak ditemukan',
+        })
+        .code(404);
+    }
+
     const wasteCollections = await prisma.wasteCollection.findMany({
       where: { userId },
       select: {
