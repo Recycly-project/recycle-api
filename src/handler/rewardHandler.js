@@ -85,7 +85,12 @@ const deleteRewardHandler = async (request, h) => {
   const { rewardId } = request.params;
 
   try {
+    // Hapus data terkait di tabel Redeem
+    await prisma.redeem.deleteMany({ where: { rewardId } });
+
+    // Hapus reward
     await prisma.reward.delete({ where: { id: rewardId } });
+
     return h
       .response({
         status: 'success',
