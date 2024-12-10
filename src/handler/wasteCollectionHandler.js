@@ -89,6 +89,7 @@ const createWasteCollectionHandler = async (request, h) => {
       .response({
         status: 'success',
         message: 'Gambar berhasil divalidasi. Proses penyimpanan berhasil.',
+        data: { label, points },
       })
       .code(201);
 
