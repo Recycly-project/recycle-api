@@ -70,13 +70,13 @@ const createWasteCollectionHandler = async (request, h) => {
     const { label, points } = await sendImageToML(tempPath);
 
     // Validasi label dari API ML
-    if (label === 'Botol Rusak' || label === 'Bukan Botol') {
+    if (label === 'Bottle Damage' || label === 'Not Bottle') {
       await fsPromises.unlink(tempPath); // Hapus file sementara
       return h
         .response({
           status: 'fail',
           message:
-            label === 'Botol Rusak'
+            label === 'Bottle Damage'
               ? 'Gambar ditolak karena botol dalam kondisi rusak.'
               : 'Gambar ditolak karena bukan botol.',
           data: { label },
