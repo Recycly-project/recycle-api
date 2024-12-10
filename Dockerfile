@@ -1,5 +1,5 @@
 # Development Stage
-FROM node:18-slim AS development
+FROM node:18-alpine AS development
 
 WORKDIR /usr/src/app
 
@@ -12,7 +12,7 @@ COPY . .
 RUN npx prisma generate
 
 # Production Stage
-FROM node:18-slim AS production
+FROM node:18-alpine AS production
 
 WORKDIR /usr/src/app
 
