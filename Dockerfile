@@ -1,25 +1,12 @@
-# Development Stage
-FROM node:18-alpine AS development
+FROM node:18-alpine AS base
 
-WORKDIR /usr/src/app
+# Tambahkan OpenSSL
+RUN apk add libssl1.1 && apk del libssl1.1
 
+# Install dependencies dan build aplikasi
+WORKDIR /app
 COPY package*.json ./
-
-RUN npm ci
-
+RUN npm install
 COPY . .
-
-RUN npx prisma generate
-
-# Production Stage
-FROM node:18-alpine AS production
-
-WORKDIR /usr/src/app
-
-COPY --from=development /usr/src/app /usr/src/app
-
-ENV NODE_ENV=production
-
-EXPOSE 3000
 
 CMD ["node", "src/server.js"]
