@@ -149,7 +149,7 @@ const getUserWasteCollectionsHandler = async (request, h) => {
         userId: true,
         label: true,
         points: true,
-        image: true,
+        // image: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -158,7 +158,7 @@ const getUserWasteCollectionsHandler = async (request, h) => {
     // Konversi gambar ke Base64
     const formattedCollections = wasteCollections.map((collection) => ({
       ...collection,
-      image: collection.image.toString('base64'), // Konversi ke Base64
+      // image: collection.image.toString('base64'), // Konversi ke Base64
     }));
 
     return h
