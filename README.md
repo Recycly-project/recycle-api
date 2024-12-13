@@ -28,92 +28,11 @@ Base URL for model Machine Learning
 
 # **📌 API Endpoints**
 
-### User
+here postman collection and env for test
 
-`POST /auth/register`
-
-this endpoint handle user register
-
-#### Request 
-
-**Headers:**
-
-- `Content-type`: `multipart/form-data`
-
-**Body:**
-- `email`
-- `password`
-- `fullname`
-- `address`
-- `ktp` : this is image file. Support formats includ JPEG and PNG.
-
-#### Response
-
-**Success Response (201 OK)**
-
-```json
-{
-    "status": "success",
-    "message": "Registrasi berhasil",
-    "data": {
-        "userId": ""
-    }
-}
-```
-
-`POST /auth/login`
-
-this endpoint handle user login with jwt token
-
-#### Request 
-
-**Headers:**
-
-- `Content-type`: `application/json`
-
-**Body:**
-- `email`
-- `password`
-
-#### Response
-
-**Success Response (201 OK)**
-
-```json
-{
-    "status": "success",
-    "message": "Login berhasil",
-    "data": {
-        "token": 
-        "user": {
-            "id": "",
-            "email": "testnew@gmail.com",
-            "fullName": "Test User New",
-            "isAdmin": false
-        }
-    }
-}
-```
-
-`POST /auth/logout`
-
-this endpoint handle user logout
-
-#### Response
-
-**Success Response (201 OK)**
-
-```json
-{
-    "status": "success",
-    "message": "Logout berhasil"
-}
-```
+*https://drive.google.com/drive/folders/1wqaAAGz1a4hYdj1weDcIuqLP4Fx8Bl6X?usp=drive_link*
 
 
 # **📜 Changelog**
 Version	Date	Description
-1.0.0	2024-11-27	Initial release of the Recycly API
-
-# **🛠️ Contributing**
-We welcome contributions to improve the API. Please refer to the CONTRIBUTING.md file for guidelines.
+1.0.0	2024-12-13	Initial release of the Recycly API
