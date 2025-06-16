@@ -1,4 +1,3 @@
-// Model ini menangani semua operasi terkait entitas 'User' dengan database.
 const prisma = require('../database/prisma');
 
 const UserModel = {
@@ -59,8 +58,8 @@ const UserModel = {
   },
 
   // Menambahkan poin ke totalPoints pengguna
-  async incrementUserPoints(userId, points) {
-    return await prisma.user.update({
+  async incrementUserPoints(userId, points, tx = prisma) {
+    return await tx.user.update({
       where: { id: userId },
       data: {
         totalPoints: { increment: points },

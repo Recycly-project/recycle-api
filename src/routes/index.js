@@ -5,6 +5,7 @@ const userRoutes = require('./userRoutes');
 const wasteCollectionRoutes = require('./wasteCollectionRoutes');
 const rewardRoutes = require('./rewardRoutes');
 const redeemRoutes = require('./redeemRoutes');
+const qrCodeRoutes = require('./qrCodeRoutes');
 
 // Menggabungkan semua array rute menjadi satu array tunggal
 const allRoutes = [].concat(
@@ -12,7 +13,8 @@ const allRoutes = [].concat(
   userRoutes,
   wasteCollectionRoutes,
   rewardRoutes,
-  redeemRoutes
+  redeemRoutes,
+  qrCodeRoutes
 );
 
 module.exports = allRoutes;

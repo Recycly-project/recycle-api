@@ -20,6 +20,7 @@ model User {
   createdAt      DateTime @default(now())
   wasteCollections WasteCollection[]
   redeems        Redeem[]
+  qrScans        QrScan[]
 }
 
 model WasteCollection {
@@ -49,4 +50,16 @@ model Reward {
   description   String   @db.VarChar
   redeemPoint   Int
   redeems       Redeem[]
+}
+
+model QrScan {
+  id          String    @id @default(uuid())
+  qrCodeId    String    @unique // ID unik dari data QR code
+  points      Int
+  bottles     Int
+  expiresAt   DateTime
+  isUsed      Boolean   @default(false)
+  scannedAt   DateTime  @default(now())
+  userId      String?   // Opsional: tautkan dengan pengguna yang memindai
+  user        User?     @relation(fields: [userId], references: [id])
 }
