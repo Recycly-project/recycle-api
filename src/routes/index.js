@@ -7,14 +7,25 @@ const rewardRoutes = require('./rewardRoutes');
 const redeemRoutes = require('./redeemRoutes');
 const qrCodeRoutes = require('./qrCodeRoutes');
 
-// Menggabungkan semua array rute menjadi satu array tunggal
-const allRoutes = [].concat(
-  authRoutes,
-  userRoutes,
-  wasteCollectionRoutes,
-  rewardRoutes,
-  redeemRoutes,
-  qrCodeRoutes
-);
+const routes = [
+  {
+    method: 'GET',
+    path: '/',
+    handler: (request, h) => {
+      return h.response({
+        status: 'success',
+        message: 'Recycle API server is running 🚀',
+      });
+    },
+  },
 
-module.exports = allRoutes;
+  // Menggabungkan semua array rute menjadi satu array tunggal
+  ...authRoutes,
+  ...userRoutes,
+  ...rewardRoutes,
+  ...redeemRoutes,
+  ...qrCodeRoutes,
+  ...wasteCollectionRoutes,
+];
+
+module.exports = routes;

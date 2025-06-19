@@ -1,21 +1,24 @@
-// Modul ini bertanggung jawab untuk berinteraksi dengan API Machine Learning.
+// Modul interaksi dengan API Machine Learning
+
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
-const config = require('../config'); // Mengambil ML_API_URL dari konfigurasi global
+const config = require('../config');
 
-// Fungsi untuk mengirim gambar ke API ML
+/**
+ * Kirim gambar ke ML API.
+ * @param {string} imagePath
+ * @returns {Promise<object>}
+ */
 const sendImageToML = async (imagePath) => {
   const formData = new FormData();
-  // Menambahkan file gambar ke FormData sebagai stream
   formData.append('image', fs.createReadStream(imagePath));
 
-  // Mengirim permintaan POST ke ML_API_URL dengan gambar
   const apiResponse = await axios.post(config.mlApiUrl, formData, {
-    headers: formData.getHeaders(), // Penting untuk menginisialisasi header FormData
+    headers: formData.getHeaders(),
   });
 
-  return apiResponse.data; // Mengembalikan data respons dari ML API
+  return apiResponse.data;
 };
 
 module.exports = {

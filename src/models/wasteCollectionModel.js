@@ -1,13 +1,22 @@
-// Model ini menangani operasi terkait entitas 'WasteCollection'.
+// Model entitas WasteCollection
+
 const prisma = require('../database/prisma');
 
 const WasteCollectionModel = {
-  // Membuat entri koleksi sampah baru
+  /**
+   * Membuat entri waste collection.
+   * @param {Object} data
+   * @returns {Promise<Object>}
+   */
   async createWasteCollection(data) {
     return await prisma.wasteCollection.create({ data });
   },
 
-  // Mendapatkan daftar koleksi sampah untuk pengguna tertentu
+  /**
+   * Ambil koleksi sampah user.
+   * @param {string} userId
+   * @returns {Promise<Array<Object>>}
+   */
   async getUserWasteCollections(userId) {
     return await prisma.wasteCollection.findMany({
       where: { userId },
@@ -17,12 +26,9 @@ const WasteCollectionModel = {
         label: true,
         points: true,
         createdAt: true,
-        // Kolom 'image' (BYTEA) biasanya tidak dikembalikan dalam respons API
-        // kecuali ada kebutuhan khusus untuk menampilkan gambar langsung dari API.
-        // Jika dibutuhkan, Anda bisa mengaktifkan kembali 'image: true'
-        // dan melakukan konversi ke Base64 di controller jika perlu.
+        // 'image' biasanya tidak dikembalikan di API.
       },
-      orderBy: { createdAt: 'desc' }, // Urutkan berdasarkan waktu terbaru
+      orderBy: { createdAt: 'desc' },
     });
   },
 };

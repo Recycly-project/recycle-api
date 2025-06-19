@@ -1,30 +1,31 @@
-// Definisi rute-rute terkait reward
+// Rute terkait reward
+
 const rewardController = require('../controllers/rewardController');
-const authMiddleware = require('../middlewares/authMiddleware'); // Menggunakan middleware otentikasi
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const rewardRoutes = [
   {
     method: 'GET',
-    path: '/rewards', // Mendapatkan daftar semua reward
+    path: '/rewards',
     handler: rewardController.getRewardsHandler,
     options: {
-      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }], // Membutuhkan token yang valid
+      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }],
     },
   },
   {
     method: 'POST',
-    path: '/admin/rewards', // Menambahkan reward baru (hanya admin)
+    path: '/admin/rewards',
     handler: rewardController.createRewardHandler,
     options: {
       pre: [
         { method: authMiddleware.verifyToken, assign: 'auth' },
-        { method: authMiddleware.isAdmin }, // Hanya admin yang bisa akses
+        { method: authMiddleware.isAdmin },
       ],
     },
   },
   {
     method: 'PUT',
-    path: '/admin/rewards/{rewardId}', // Memperbarui reward (hanya admin)
+    path: '/admin/rewards/{rewardId}',
     handler: rewardController.updateRewardHandler,
     options: {
       pre: [
@@ -35,7 +36,7 @@ const rewardRoutes = [
   },
   {
     method: 'DELETE',
-    path: '/admin/rewards/{rewardId}', // Menghapus reward (hanya admin)
+    path: '/admin/rewards/{rewardId}',
     handler: rewardController.deleteRewardHandler,
     options: {
       pre: [

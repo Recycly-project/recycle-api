@@ -1,28 +1,30 @@
+// Rute terkait pemindaian QR code
+
 const qrCodeController = require('../controllers/qrCodeController');
-const authMiddleware = require('../middlewares/authMiddleware'); // Menggunakan middleware otentikasi
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const qrCodeRoutes = [
   {
     method: 'POST',
-    path: '/users/{id}/scan-qr', // Endpoint untuk memindai gambar QR code
+    path: '/users/{id}/scan-qr',
     handler: qrCodeController.scanQrCodeHandler,
     options: {
       payload: {
-        output: 'stream', // Menerima data sebagai stream
-        parse: true, // Mem-parsing payload
-        multipart: true, // Mengizinkan multipart/form-data (untuk upload file)
-        maxBytes: 2 * 1024 * 1024, // Batas ukuran file 2MB
-        allow: 'multipart/form-data', // Hanya izinkan multipart/form-data
+        output: 'stream',
+        parse: true,
+        multipart: true,
+        maxBytes: 2 * 1024 * 1024,
+        allow: 'multipart/form-data',
       },
-      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }], // Membutuhkan token yang valid
+      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }],
     },
   },
   {
     method: 'GET',
-    path: '/users/{id}/qr-history', // Mendapatkan riwayat pemindaian QR code pengguna
+    path: '/users/{id}/qr-history',
     handler: qrCodeController.getQrCodeHistoryHandler,
     options: {
-      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }], // Membutuhkan token yang valid
+      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }],
     },
   },
 ];

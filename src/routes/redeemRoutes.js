@@ -1,22 +1,23 @@
-// Definisi rute-rute terkait penukaran reward (redeem)
+// Rute terkait penukaran reward (redeem)
+
 const redeemController = require('../controllers/redeemController');
-const authMiddleware = require('../middlewares/authMiddleware'); // Menggunakan middleware otentikasi
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const redeemRoutes = [
   {
     method: 'POST',
-    path: '/users/{id}/rewards/{rewardId}/redeem', // Melakukan penukaran reward
+    path: '/users/{id}/rewards/{rewardId}/redeem',
     handler: redeemController.redeemRewardHandler,
     options: {
-      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }], // Membutuhkan token yang valid
+      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }],
     },
   },
   {
     method: 'GET',
-    path: '/redeems', // Mendapatkan riwayat penukaran pengguna
+    path: '/redeems',
     handler: redeemController.getRedeemHistoryHandler,
     options: {
-      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }], // Membutuhkan token yang valid
+      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }],
     },
   },
 ];

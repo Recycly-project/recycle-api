@@ -1,13 +1,22 @@
-// src/models/userModel.js
+// Model entitas User
+
 const prisma = require('../database/prisma');
 
 const UserModel = {
-  // Mencari pengguna berdasarkan email
+  /**
+   * Cari user by email.
+   * @param {string} email
+   * @returns {Promise<Object|null>}
+   */
   async findUserByEmail(email) {
     return await prisma.user.findUnique({ where: { email } });
   },
 
-  // Mencari pengguna berdasarkan ID, hanya mengembalikan kolom yang relevan
+  /**
+   * Cari user by ID (field relevan saja).
+   * @param {string} id
+   * @returns {Promise<Object|null>}
+   */
   async findUserById(id) {
     return await prisma.user.findUnique({
       where: { id },
@@ -16,19 +25,28 @@ const UserModel = {
         email: true,
         fullName: true,
         address: true,
-        ktp: true, // ktp akan menjadi buffer (BYTEA)
+        ktp: true,
         totalPoints: true,
         isAdmin: true,
       },
     });
   },
 
-  // Membuat pengguna baru
+  /**
+   * Membuat user baru.
+   * @param {Object} userData
+   * @returns {Promise<Object>}
+   */
   async createUser(userData) {
     return await prisma.user.create({ data: userData });
   },
 
-  // Memperbarui data pengguna berdasarkan ID
+  /**
+   * Update user by ID.
+   * @param {string} id
+   * @param {Object} userData
+   * @returns {Promise<Object>}
+   */
   async updateUser(id, userData) {
     return await prisma.user.update({
       where: { id },
@@ -36,16 +54,21 @@ const UserModel = {
     });
   },
 
-  // Menghapus pengguna berdasarkan ID dan semua data terkaitnya
+  /**
+   * Hapus user beserta data terkait.
+   * @param {string} id
+   * @returns {Promise<Object>}
+   */
   async deleteUser(id) {
-    // Penting: Hapus data terkait di tabel lain yang memiliki foreign key ke 'User'
-    // untuk menghindari error constraint violation.
     await prisma.redeem.deleteMany({ where: { userId: id } });
     await prisma.wasteCollection.deleteMany({ where: { userId: id } });
     return await prisma.user.delete({ where: { id } });
   },
 
-  // Mendapatkan semua pengguna (biasanya untuk admin)
+  /**
+   * Ambil semua user (admin).
+   * @returns {Promise<Array<Object>>}
+   */
   async getAllUsers() {
     return await prisma.user.findMany({
       select: {
@@ -58,7 +81,13 @@ const UserModel = {
     });
   },
 
-  // Menambahkan poin ke totalPoints pengguna (sudah benar menggunakan tx)
+  /**
+   * Tambahkan poin ke user.
+   * @param {string} userId
+   * @param {number} points
+   * @param {Object} [tx=prisma]
+   * @returns {Promise<Object>}
+   */
   async incrementUserPoints(userId, points, tx = prisma) {
     return await tx.user.update({
       where: { id: userId },
@@ -68,8 +97,13 @@ const UserModel = {
     });
   },
 
-  // Mengurangi poin dari totalPoints pengguna
-  // BEST PRACTICE: Pastikan juga mendukung transaksi dengan parameter 'tx'
+  /**
+   * Kurangi poin user.
+   * @param {string} userId
+   * @param {number} points
+   * @param {Object} [tx=prisma]
+   * @returns {Promise<Object>}
+   */
   async decrementUserPoints(userId, points, tx = prisma) {
     return await tx.user.update({
       where: { id: userId },

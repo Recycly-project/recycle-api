@@ -1,49 +1,42 @@
-// Entry point utama untuk aplikasi Hapi.js.
-// Bertanggung jawab untuk menginisialisasi server, koneksi database, dan memuat rute.
+// Inisialisasi server, koneksi database, dan rute
 
-require('dotenv').config(); // Memuat variabel lingkungan dari file .env
+require('dotenv').config(); // Memuat variabel .env
 
 const Hapi = require('@hapi/hapi');
-const routes = require('./routes'); // Mengimpor semua rute dari src/routes/index.js
-// Mengimpor getPrismaDbUrl, port, dan host dari file config yang baru
+const routes = require('./routes');
 const { getPrismaDbUrl, port, host } = require('./config');
 
-// Fungsi asinkron untuk menginisialisasi dan memulai server
+// Fungsi inisialisasi server
 const init = async () => {
   try {
-    // Dapatkan URL database dari konfigurasi lokal
+    // Ambil URL database
     const dbUrl = await getPrismaDbUrl();
     if (!dbUrl) {
-      throw new Error(
-        'Failed to retrieve database URL. Please check your .env file.'
-      );
+      throw new Error('Failed to retrieve DATABASE_URL. Please check .env.');
     }
-    // console.log('Database URL:', dbUrl);
 
-    // Inisialisasi server Hapi
+    // Setup server Hapi
     const server = Hapi.server({
-      port: port, // Menggunakan port dari konfigurasi yang digabungkan
-      host: host, // Menggunakan host dari konfigurasi yang digabungkan
+      port,
+      host,
       routes: {
         cors: {
-          origin: ['*'], // Mengizinkan semua origin untuk CORS (sesuaikan di produksi)
-          // Contoh untuk origin spesifik: origin: ['http://localhost:8080', 'https://your-frontend.com'],
+          origin: ['*'], // CORS diizinkan semua (atur ulang untuk production)
         },
       },
     });
 
-    // Daftarkan semua rute ke server
+    // Register rute
     server.route(routes);
 
-    // Mulai server
+    // Start server
     await server.start();
-    console.log(`Server running on ${server.info.uri}`); // Pesan server berjalan
+    console.log(`Server running at ${server.info.uri}`);
   } catch (error) {
-    console.error('Error during server initialization:', error.message);
-    // Keluar dari proses dengan kode error jika inisialisasi gagal
+    console.error('Server init error:', error.message);
     process.exit(1);
   }
 };
 
-// Panggil fungsi inisialisasi server
+// Jalankan server
 init();

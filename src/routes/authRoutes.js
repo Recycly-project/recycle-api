@@ -1,6 +1,7 @@
-// Definisi rute-rute terkait otentikasi (auth)
+// Rute terkait otentikasi (auth)
+
 const authController = require('../controllers/authController');
-const authMiddleware = require('../middlewares/authMiddleware'); // Menggunakan middleware otentikasi
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const authRoutes = [
   {
@@ -9,10 +10,10 @@ const authRoutes = [
     handler: authController.registerHandler,
     options: {
       payload: {
-        output: 'stream', // Mengizinkan stream untuk file (KTP)
+        output: 'stream',
         parse: true,
-        multipart: true, // Mengizinkan multipart/form-data
-        maxBytes: 2 * 1024 * 1024, // Batas ukuran file 2MB
+        multipart: true,
+        maxBytes: 2 * 1024 * 1024,
         allow: 'multipart/form-data',
       },
     },
@@ -27,12 +28,12 @@ const authRoutes = [
     path: '/auth/logout',
     handler: authController.logoutHandler,
     options: {
-      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }], // Membutuhkan token yang valid
+      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }],
     },
   },
   {
     method: 'PUT',
-    path: '/users/{id}/verify', // Endpoint untuk update KTP
+    path: '/users/{id}/verify',
     handler: authController.updateKtpHandler,
     options: {
       payload: {
@@ -42,17 +43,17 @@ const authRoutes = [
         maxBytes: 2 * 1024 * 1024,
         allow: 'multipart/form-data',
       },
-      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }], // Membutuhkan token yang valid
+      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }],
     },
   },
   {
     method: 'GET',
-    path: '/admin/users', // Endpoint untuk mendapatkan semua pengguna (hanya admin)
+    path: '/admin/users',
     handler: authController.getAllUsersHandler,
     options: {
       pre: [
-        { method: authMiddleware.verifyToken, assign: 'auth' }, // Verifikasi token dulu
-        { method: authMiddleware.isAdmin }, // Lalu cek apakah user adalah admin
+        { method: authMiddleware.verifyToken, assign: 'auth' },
+        { method: authMiddleware.isAdmin },
       ],
     },
   },

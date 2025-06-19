@@ -1,82 +1,77 @@
-// Controller ini menangani logika terkait koleksi sampah.
-const WasteCollectionModel = require('../models/wasteCollectionModel'); // Menggunakan WasteCollectionModel
-const UserModel = require('../models/userModel'); // Menggunakan UserModel untuk update poin
-const { sendImageToML } = require('../utils/mlService'); // Menggunakan ML Service
-const fsPromises = require('fs').promises; // Untuk operasi file asinkron
-const fs = require('fs'); // Untuk cek direktori
-const path = require('path'); // Untuk manipulasi path
+// Controller koleksi sampah
+
+const WasteCollectionModel = require('../models/wasteCollectionModel');
+const UserModel = require('../models/userModel');
+const { sendImageToML } = require('../utils/mlService');
+const fsPromises = require('fs').promises;
+const fs = require('fs');
+const path = require('path');
 const {
   handleServerError,
   handleClientError,
 } = require('../utils/errorHandler');
 
-// Direktori sementara untuk menyimpan file yang diunggah (di root proyek)
+// Setup direktori sementara upload
 const tempDir = path.join(process.cwd(), 'uploads');
-// Pastikan direktori 'uploads' ada
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir);
 }
 
+// Handler tambah koleksi sampah
 const createWasteCollectionHandler = async (request, h) => {
-  const { id: userId } = request.params; // ID pengguna dari parameter URL
-  const { payload } = request; // Data payload (termasuk gambar)
+  const { id: userId } = request.params;
+  const { payload } = request;
 
   try {
-    const user = await UserModel.findUserById(userId); // Verifikasi pengguna
+    const user = await UserModel.findUserById(userId);
     if (!user) {
       return handleClientError(h, 'Pengguna tidak ditemukan', 404);
     }
 
     if (!payload || !payload.image) {
-      return handleClientError(
-        h,
-        'Gambar tidak ditemukan dalam permintaan',
-        400
-      );
+      return handleClientError(h, 'Gambar tidak ditemukan.', 400);
     }
 
-    // Simpan gambar yang diunggah sementara ke disk
+    // Simpan gambar sementara
     const tempPath = path.join(
       tempDir,
       `${Date.now()}-${payload.image.hapi.filename}`
     );
     await fsPromises.writeFile(tempPath, payload.image._data);
 
-    // Kirim gambar ke ML API untuk klasifikasi dan perhitungan poin
+    // Kirim ke ML service
     const { label, points } = await sendImageToML(tempPath);
 
-    // Validasi hasil dari ML API
+    // Validasi hasil ML
     if (label === 'Bottle Damage' || label === 'Non Bottle') {
-      await fsPromises.unlink(tempPath); // Hapus file sementara
+      await fsPromises.unlink(tempPath);
       return handleClientError(
         h,
         label === 'Bottle Damage'
-          ? 'Gambar ditolak karena botol dalam kondisi rusak.'
-          : 'Gambar ditolak karena bukan botol.',
+          ? 'Botol rusak. Gambar ditolak.'
+          : 'Bukan botol. Gambar ditolak.',
         400,
-        { label } // Sertakan label dari ML API
+        { label }
       );
     }
 
-    // Baca kembali gambar sebagai buffer untuk disimpan di database (jika diperlukan)
+    // Simpan ke DB
     const fileBuffer = await fsPromises.readFile(tempPath);
-    await fsPromises.unlink(tempPath); // Hapus file sementara setelah dibaca
+    await fsPromises.unlink(tempPath);
 
-    // Buat entri koleksi sampah di database menggunakan model
     await WasteCollectionModel.createWasteCollection({
       userId,
       label,
       points,
-      image: fileBuffer, // Simpan gambar sebagai BYTEA
+      image: fileBuffer,
     });
 
-    // Tambahkan poin ke total poin pengguna menggunakan model
     await UserModel.incrementUserPoints(userId, points);
 
     return h
       .response({
         status: 'success',
-        message: 'Gambar berhasil divalidasi dan poin ditambahkan.',
+        message: 'Gambar valid. Poin ditambahkan.',
         data: { label, points },
       })
       .code(201);
@@ -85,16 +80,16 @@ const createWasteCollectionHandler = async (request, h) => {
   }
 };
 
+// Handler ambil koleksi sampah user
 const getUserWasteCollectionsHandler = async (request, h) => {
-  const { id: userId } = request.params; // ID pengguna dari parameter URL
+  const { id: userId } = request.params;
 
   try {
-    const user = await UserModel.findUserById(userId); // Verifikasi pengguna
+    const user = await UserModel.findUserById(userId);
     if (!user) {
       return handleClientError(h, 'Pengguna tidak ditemukan', 404);
     }
 
-    // Dapatkan daftar koleksi sampah pengguna menggunakan model
     const wasteCollections = await WasteCollectionModel.getUserWasteCollections(
       userId
     );
@@ -103,7 +98,7 @@ const getUserWasteCollectionsHandler = async (request, h) => {
       .response({
         status: 'success',
         message: 'Daftar koleksi berhasil diambil.',
-        data: { wasteCollections: wasteCollections },
+        data: { wasteCollections },
       })
       .code(200);
   } catch (error) {
