@@ -1,30 +1,31 @@
-// Definisi rute-rute terkait pengguna (user)
+// Rute terkait pengguna (user)
+
 const userController = require('../controllers/userController');
-const authMiddleware = require('../middlewares/authMiddleware'); // Menggunakan middleware otentikasi
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const userRoutes = [
   {
     method: 'GET',
-    path: '/users/{id}', // Mendapatkan data pengguna berdasarkan ID
+    path: '/users/{id}',
     handler: userController.getUserByIdHandler,
     options: {
-      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }], // Membutuhkan token yang valid
+      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }],
     },
   },
   {
     method: 'PUT',
-    path: '/users/{id}', // Memperbarui data pengguna berdasarkan ID
+    path: '/users/{id}',
     handler: userController.updateUserHandler,
     options: {
-      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }], // Membutuhkan token yang valid
+      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }],
     },
   },
   {
     method: 'DELETE',
-    path: '/users/{id}', // Menghapus pengguna berdasarkan ID
+    path: '/users/{id}',
     handler: userController.deleteUserHandler,
     options: {
-      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }], // Membutuhkan token yang valid
+      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }],
     },
   },
 ];

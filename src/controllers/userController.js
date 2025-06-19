@@ -1,16 +1,17 @@
-// Controller ini menangani logika bisnis terkait manajemen data pengguna (selain otentikasi).
-const UserModel = require('../models/userModel'); // Menggunakan UserModel
+// Controller manajemen data pengguna (non-otentikasi)
+
+const UserModel = require('../models/userModel');
 const {
   handleServerError,
   handleClientError,
 } = require('../utils/errorHandler');
 
+// Handler ambil data user by ID
 const getUserByIdHandler = async (request, h) => {
-  const { id } = request.params; // Ambil ID pengguna dari parameter URL
+  const { id } = request.params;
 
   try {
-    const user = await UserModel.findUserById(id); // Cari pengguna berdasarkan ID menggunakan model
-
+    const user = await UserModel.findUserById(id);
     if (!user) {
       return handleClientError(h, 'Pengguna tidak ditemukan', 404);
     }
@@ -18,7 +19,7 @@ const getUserByIdHandler = async (request, h) => {
     return h
       .response({
         status: 'success',
-        message: 'Data pengguna berhasil diambil',
+        message: 'Data pengguna berhasil diambil.',
         data: { user },
       })
       .code(200);
@@ -27,12 +28,13 @@ const getUserByIdHandler = async (request, h) => {
   }
 };
 
+// Handler update data user
 const updateUserHandler = async (request, h) => {
-  const { id } = request.params; // Ambil ID pengguna dari parameter URL
-  const { email, fullName, address, ktp } = request.payload; // Ambil data update dari payload
+  const { id } = request.params;
+  const { email, fullName, address, ktp } = request.payload;
 
   try {
-    const existingUser = await UserModel.findUserById(id); // Pastikan pengguna ada
+    const existingUser = await UserModel.findUserById(id);
     if (!existingUser) {
       return handleClientError(h, 'Pengguna tidak ditemukan', 404);
     }
@@ -42,12 +44,12 @@ const updateUserHandler = async (request, h) => {
       fullName,
       address,
       ktp,
-    }); // Perbarui pengguna menggunakan model
+    });
 
     return h
       .response({
         status: 'success',
-        message: 'Profil berhasil diperbarui',
+        message: 'Profil berhasil diperbarui.',
         data: { userId: updatedUser.id, fullName: updatedUser.fullName },
       })
       .code(200);
@@ -56,21 +58,22 @@ const updateUserHandler = async (request, h) => {
   }
 };
 
+// Handler hapus user
 const deleteUserHandler = async (request, h) => {
-  const { id: userId } = request.params; // Ambil ID pengguna dari parameter URL
+  const { id: userId } = request.params;
 
   try {
-    const user = await UserModel.findUserById(userId); // Pastikan pengguna ada
+    const user = await UserModel.findUserById(userId);
     if (!user) {
       return handleClientError(h, 'Pengguna tidak ditemukan', 404);
     }
 
-    await UserModel.deleteUser(userId); // Hapus pengguna menggunakan model (model akan menangani penghapusan terkait)
+    await UserModel.deleteUser(userId);
 
     return h
       .response({
         status: 'success',
-        message: 'Pengguna berhasil dihapus',
+        message: 'Pengguna berhasil dihapus.',
         data: { userId },
       })
       .code(200);

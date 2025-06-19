@@ -1,28 +1,29 @@
-// Definisi rute-rute terkait koleksi sampah
+// Rute terkait koleksi sampah
+
 const wasteCollectionController = require('../controllers/wasteCollectionController');
-const authMiddleware = require('../middlewares/authMiddleware'); // Menggunakan middleware otentikasi
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const wasteCollectionRoutes = [
   {
     method: 'POST',
-    path: '/users/{id}/waste-collections', // Mengunggah gambar koleksi sampah
+    path: '/users/{id}/waste-collections',
     handler: wasteCollectionController.createWasteCollectionHandler,
     options: {
       payload: {
         output: 'stream',
         parse: true,
         multipart: true,
-        maxBytes: 2 * 1024 * 1024, // Batas ukuran file 2MB
+        maxBytes: 2 * 1024 * 1024,
       },
-      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }], // Membutuhkan token yang valid
+      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }],
     },
   },
   {
     method: 'GET',
-    path: '/users/{id}/waste-collections', // Mendapatkan riwayat koleksi sampah pengguna
+    path: '/users/{id}/waste-collections',
     handler: wasteCollectionController.getUserWasteCollectionsHandler,
     options: {
-      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }], // Membutuhkan token yang valid
+      pre: [{ method: authMiddleware.verifyToken, assign: 'auth' }],
     },
   },
 ];

@@ -1,21 +1,20 @@
-// Controller ini menangani logika otentikasi (registrasi, login, dll.).
+// Controller otentikasi: registrasi, login, update KTP, daftar user, logout
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const UserModel = require('../models/userModel'); // Menggunakan UserModel
+const UserModel = require('../models/userModel');
 const config = require('../config');
 const {
   handleServerError,
   handleClientError,
 } = require('../utils/errorHandler');
 
+// Handler registrasi user baru
 const registerHandler = async (request, h) => {
-  // Gunakan 'let' untuk isAdmin karena nilainya mungkin akan diubah
   let { email, password, fullName, address, isAdmin } = request.payload;
-  const file = request.payload.ktp; // File KTP (jika ada)
+  const file = request.payload.ktp;
 
   try {
-    // Jika isAdmin datang sebagai string (misalnya dari form-data Postman),
-    // konversikan menjadi nilai Boolean yang sebenarnya.
     if (typeof isAdmin === 'string') {
       isAdmin = isAdmin.toLowerCase() === 'true';
     }
@@ -26,11 +25,7 @@ const registerHandler = async (request, h) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    let ktpBuffer = null;
-
-    if (file && file._data) {
-      ktpBuffer = file._data; // Simpan data file sebagai buffer
-    }
+    const ktpBuffer = file && file._data ? file._data : null;
 
     const newUser = await UserModel.createUser({
       email,
@@ -38,7 +33,7 @@ const registerHandler = async (request, h) => {
       fullName,
       address,
       ktp: ktpBuffer,
-      isAdmin: isAdmin || false, // Default isAdmin false
+      isAdmin: isAdmin || false,
     });
 
     return h
@@ -53,6 +48,7 @@ const registerHandler = async (request, h) => {
   }
 };
 
+// Handler login user
 const loginHandler = async (request, h) => {
   const { email, password } = request.payload;
 
@@ -67,11 +63,10 @@ const loginHandler = async (request, h) => {
       return handleClientError(h, 'Email atau password salah', 401);
     }
 
-    // Buat token JWT
     const token = jwt.sign(
       { userId: user.id, isAdmin: user.isAdmin },
-      config.jwtSecret, // Kunci rahasia dari konfigurasi
-      { expiresIn: '1h' } // Token berlaku 1 jam
+      config.jwtSecret,
+      { expiresIn: '1h' }
     );
 
     return h
@@ -94,6 +89,7 @@ const loginHandler = async (request, h) => {
   }
 };
 
+// Handler update KTP
 const updateKtpHandler = async (request, h) => {
   const { id } = request.params;
   const file = request.payload.ktp;
@@ -108,7 +104,6 @@ const updateKtpHandler = async (request, h) => {
       return handleClientError(h, 'File KTP tidak valid', 400);
     }
 
-    // Perbarui kolom ktp dengan data buffer file
     await UserModel.updateUser(id, { ktp: file._data });
 
     return h
@@ -122,9 +117,9 @@ const updateKtpHandler = async (request, h) => {
   }
 };
 
+// Handler ambil semua user
 const getAllUsersHandler = async (request, h) => {
   try {
-    // Hanya admin yang bisa mengakses ini (diasumsikan sudah diverifikasi oleh middleware isAdmin)
     const users = await UserModel.getAllUsers();
 
     if (users.length === 0) {
@@ -143,11 +138,13 @@ const getAllUsersHandler = async (request, h) => {
   }
 };
 
+// Handler logout (dummy, karena token tetap aktif di client)
 const logoutHandler = async (request, h) => {
-  // Untuk JWT sederhana, logout hanya berarti klien membuang token.
-  // Tidak ada logika server-side kompleks yang diperlukan di sini kecuali ada blacklist token.
   return h
-    .response({ status: 'success', message: 'Logout berhasil' })
+    .response({
+      status: 'success',
+      message: 'Logout berhasil',
+    })
     .code(200);
 };
 

@@ -1,35 +1,29 @@
+// Controller QR Code: scan & riwayat
+
 const QrScanModel = require('../models/qrScanModel');
 const UserModel = require('../models/userModel');
 const {
   handleServerError,
   handleClientError,
 } = require('../utils/errorHandler');
-const { Jimp } = require('jimp'); // Menggunakan destructuring untuk mengimpor kelas Jimp
+const { Jimp } = require('jimp');
 const jsQR = require('jsqr');
 const fsPromises = require('fs').promises;
 const fs = require('fs');
 const path = require('path');
 const prisma = require('../database/prisma');
 
-// Direktori sementara untuk menyimpan file yang diunggah (di root proyek)
+// Setup direktori sementara
 const tempDir = path.join(process.cwd(), 'uploads');
-// Pastikan direktori 'uploads' ada
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir);
 }
 
-/**
- * Handler untuk memindai gambar QR code, memvalidasi data, dan menambahkan poin.
- * Endpoint: POST /users/{id}/scan-qr
- * @param {object} request - Objek permintaan Hapi.
- * @param {object} h - Objek respons Hapi.
- * @returns {Promise<Hapi.ResponseObject>} Objek respons Hapi.
- */
+// Handler untuk scan QR code
 const scanQrCodeHandler = async (request, h) => {
   const { id: userId } = request.params;
   const { payload } = request;
-
-  let tempPath = null; // Deklarasikan tempPath di luar blok try untuk memastikan bisa diakses di finally
+  let tempPath = null;
 
   try {
     const user = await UserModel.findUserById(userId);
@@ -38,11 +32,7 @@ const scanQrCodeHandler = async (request, h) => {
     }
 
     if (!payload || !payload.qrCodeImage) {
-      return handleClientError(
-        h,
-        'Gambar QR code tidak ditemukan dalam permintaan',
-        400
-      );
+      return handleClientError(h, 'Gambar QR code tidak ditemukan.', 400);
     }
 
     tempPath = path.join(
@@ -60,31 +50,24 @@ const scanQrCodeHandler = async (request, h) => {
       if (code && code.data) {
         qrData = JSON.parse(code.data);
       } else {
-        return handleClientError(
-          h,
-          'Tidak dapat memindai QR code dari gambar atau data tidak valid.',
-          400
-        );
+        return handleClientError(h, 'QR code tidak valid.', 400);
       }
     } catch (jimpOrJsQRError) {
       console.error('Error processing QR code image:', jimpOrJsQRError);
 
-      // Tangani error Jimp spesifik "Could not find MIME for Buffer" sebagai client error
       if (
         jimpOrJsQRError.message &&
         jimpOrJsQRError.message.includes('Could not find MIME for Buffer')
       ) {
         return handleClientError(
           h,
-          'File gambar yang diunggah tidak dikenali sebagai gambar yang valid. Pastikan format file benar (PNG/JPEG) dan tidak rusak.',
+          'Format file tidak dikenali. Gunakan PNG/JPEG yang valid.',
           400
         );
       }
 
-      // Untuk error Jimp/jsQR lainnya yang tidak spesifik MIME, re-throw
       throw jimpOrJsQRError;
     } finally {
-      // Pastikan file sementara dihapus setelah diproses, berhasil atau gagal
       if (tempPath && fs.existsSync(tempPath)) {
         await fsPromises
           .unlink(tempPath)
@@ -100,20 +83,12 @@ const scanQrCodeHandler = async (request, h) => {
       typeof bottles !== 'number' ||
       !expiresAt
     ) {
-      return handleClientError(
-        h,
-        'Data QR code tidak lengkap atau tidak valid.',
-        400
-      );
+      return handleClientError(h, 'Data QR code tidak lengkap.', 400);
     }
 
     const expiryDate = new Date(expiresAt);
     if (isNaN(expiryDate.getTime())) {
-      return handleClientError(
-        h,
-        'Format tanggal kedaluwarsa QR code tidak valid.',
-        400
-      );
+      return handleClientError(h, 'Tanggal kedaluwarsa tidak valid.', 400);
     }
 
     if (expiryDate < new Date()) {
@@ -122,7 +97,7 @@ const scanQrCodeHandler = async (request, h) => {
 
     const existingQrEntry = await QrScanModel.findQrScanByQrCodeId(qrCodeId);
     if (existingQrEntry && existingQrEntry.isUsed) {
-      return handleClientError(h, 'QR code ini sudah pernah digunakan.', 409);
+      return handleClientError(h, 'QR code sudah pernah digunakan.', 409);
     }
 
     await prisma.$transaction(async (tx) => {
@@ -138,13 +113,13 @@ const scanQrCodeHandler = async (request, h) => {
         tx
       );
 
-      await UserModel.incrementUserPoints(userId, points, tx);
+      await UserModel.incrementUserPoints(userId, points, (tx = prisma));
     });
 
     return h
       .response({
         status: 'success',
-        message: 'QR code berhasil dipindai dan poin ditambahkan.',
+        message: 'QR code berhasil dipindai & poin ditambahkan.',
         data: {
           qrCodeId,
           pointsAdded: points,
@@ -153,18 +128,11 @@ const scanQrCodeHandler = async (request, h) => {
       })
       .code(200);
   } catch (error) {
-    // Tangani error server umum atau error yang di-re-throw dari blok try/catch internal
-    return handleServerError(h, error, 'Gagal memproses gambar QR code.');
+    return handleServerError(h, error, 'Gagal memproses QR code.');
   }
 };
 
-/**
- * Handler untuk mendapatkan riwayat pemindaian QR code pengguna.
- * Endpoint: GET /users/{id}/qr-history
- * @param {object} request - Objek permintaan Hapi.
- * @param {object} h - Objek respons Hapi.
- * @returns {Promise<Hapi.ResponseObject>} Objek respons Hapi.
- */
+// Handler untuk ambil riwayat scan QR code
 const getQrCodeHistoryHandler = async (request, h) => {
   const { id: userId } = request.params;
 
@@ -184,11 +152,7 @@ const getQrCodeHistoryHandler = async (request, h) => {
       })
       .code(200);
   } catch (error) {
-    return handleServerError(
-      h,
-      error,
-      'Gagal mengambil riwayat pemindaian QR code.'
-    );
+    return handleServerError(h, error, 'Gagal mengambil riwayat QR code.');
   }
 };
 

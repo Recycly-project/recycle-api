@@ -1,20 +1,22 @@
+// Model entitas Scan QR Code
+
 const prisma = require('../database/prisma');
 
 const QrScanModel = {
   /**
-   * Membuat entri baru untuk pemindaian QR code.
-   * @param {Object} data - Data pemindaian QR code.
-   * @param {Object} [tx=prisma] - Instance PrismaClient atau transaksi (opsional, default ke prisma global).
-   * @returns {Promise<Object>} Entri QrScan yang baru dibuat.
+   * Membuat entri pemindaian QR code.
+   * @param {Object} data
+   * @param {Object} [tx=prisma]
+   * @returns {Promise<Object>}
    */
   async createQrScanEntry(data, tx = prisma) {
     return await tx.qrScan.create({ data });
   },
 
   /**
-   * Mencari entri QrScan berdasarkan ID unik QR code (dari payload QR).
-   * @param {string} qrCodeId - ID unik QR code yang terkandung dalam QR itu sendiri.
-   * @returns {Promise<Object|null>} Entri QrScan jika ditemukan, null jika tidak.
+   * Mencari entri QR code berdasarkan qrCodeId.
+   * @param {string} qrCodeId
+   * @returns {Promise<Object|null>}
    */
   async findQrScanByQrCodeId(qrCodeId) {
     return await prisma.qrScan.findUnique({ where: { qrCodeId } });
@@ -22,10 +24,10 @@ const QrScanModel = {
 
   /**
    * Memperbarui status penggunaan QR code.
-   * @param {string} id - ID internal entri QrScan di database (bukan qrCodeId dari payload QR).
-   * @param {boolean} isUsed - Status penggunaan baru.
-   * @param {Object} [tx=prisma] - Instance PrismaClient atau transaksi (opsional, default ke prisma global).
-   * @returns {Promise<Object>} Entri QrScan yang diperbarui.
+   * @param {string} id
+   * @param {boolean} isUsed
+   * @param {Object} [tx=prisma]
+   * @returns {Promise<Object>}
    */
   async updateQrScanStatus(id, isUsed, tx = prisma) {
     return await tx.qrScan.update({
@@ -35,9 +37,9 @@ const QrScanModel = {
   },
 
   /**
-   * Mendapatkan riwayat pemindaian QR code untuk pengguna tertentu.
-   * @param {string} userId - ID pengguna.
-   * @returns {Promise<Array<Object>>} Daftar riwayat pemindaian QR code.
+   * Riwayat pemindaian QR code user.
+   * @param {string} userId
+   * @returns {Promise<Array<Object>>}
    */
   async getUserQrScanHistory(userId) {
     return await prisma.qrScan.findMany({

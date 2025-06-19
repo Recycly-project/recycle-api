@@ -1,35 +1,39 @@
+// Prisma schema: data model aplikasi
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["prismaSchemaFolder"]
 }
 
 model User {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @unique
-  email          String   @unique
-  password       String   @db.VarChar
-  fullName       String   @db.VarChar
-  address        String?  @db.VarChar
-  ktp            Bytes? 
-  totalPoints    Int      @default(0)
-  isAdmin           Boolean  @default(false)
-  createdAt      DateTime @default(now())
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @unique
+  email            String   @unique
+  password         String   @db.VarChar
+  fullName         String   @db.VarChar
+  address          String?  @db.VarChar
+  ktp              Bytes?
+  totalPoints      Int      @default(0)
+  isAdmin          Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  
   wasteCollections WasteCollection[]
-  redeems        Redeem[]
-  qrScans        QrScan[]
+  redeems          Redeem[]
+  qrScans          QrScan[]
 }
 
 model WasteCollection {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @unique
   userId     String   @map("userld")
   label      String
-  points     Int   
+  points     Int
   image      Bytes
   createdAt  DateTime @default(now())
+
   user       User     @relation(fields: [userId], references: [id])
 }
 
@@ -40,26 +44,29 @@ model Redeem {
   status     Boolean
   pointsUsed Int      @map("pointsUsed")
   createdAt  DateTime @default(now())
+
   user       User     @relation(fields: [userId], references: [id])
   reward     Reward   @relation(fields: [rewardId], references: [id])
 }
 
 model Reward {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @unique
-  title         String   @db.VarChar
-  description   String   @db.VarChar
-  redeemPoint   Int
-  redeems       Redeem[]
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @unique
+  title        String   @db.VarChar
+  description  String   @db.VarChar
+  redeemPoint  Int
+
+  redeems      Redeem[]
 }
 
 model QrScan {
   id          String    @id @default(uuid())
-  qrCodeId    String    @unique // ID unik dari data QR code
+  qrCodeId    String    @unique          // ID unik dari data QR code
   points      Int
   bottles     Int
   expiresAt   DateTime
   isUsed      Boolean   @default(false)
   scannedAt   DateTime  @default(now())
-  userId      String?   // Opsional: tautkan dengan pengguna yang memindai
+  
+  userId      String?   // Opsional: relasi ke User
   user        User?     @relation(fields: [userId], references: [id])
 }

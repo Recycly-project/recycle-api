@@ -1,47 +1,43 @@
-// Middleware untuk verifikasi token JWT dan otorisasi berbasis peran (isAdmin).
-const jwt = require('jsonwebtoken');
-const config = require('../config'); // Mengambil JWT_SECRET dari konfigurasi global
+// Middleware verifikasi JWT & otorisasi admin
 
-// Fungsi middleware untuk memverifikasi token JWT
+const jwt = require('jsonwebtoken');
+const config = require('../config');
+
+// Middleware verifikasi token JWT
 const verifyToken = (request, h) => {
   const authHeader = request.headers.authorization;
 
-  // Cek apakah header Authorization ada
   if (!authHeader) {
     return h
       .response({
         status: 'fail',
-        message: 'Token otentikasi tidak ada',
+        message: 'Token otentikasi tidak ada.',
       })
       .code(401)
-      .takeover(); // Hentikan alur permintaan
+      .takeover();
   }
 
-  // Ambil token dari header (format: Bearer <token>)
   const token = authHeader.split(' ')[1];
 
   try {
-    // Verifikasi token menggunakan JWT_SECRET
     const decoded = jwt.verify(token, config.jwtSecret);
-    // Simpan informasi user (userId dan isAdmin) di objek request untuk handler berikutnya
     request.auth = { userId: decoded.userId, isAdmin: decoded.isAdmin };
 
-    return h.continue; // Lanjutkan ke handler berikutnya
+    return h.continue;
   } catch (error) {
-    console.error('Error in verifyToken:', error.message); // Catat error untuk debugging
+    console.error('verifyToken error:', error.message);
     return h
       .response({
         status: 'fail',
-        message: 'Token tidak valid atau telah kedaluwarsa',
+        message: 'Token tidak valid atau telah kedaluwarsa.',
       })
       .code(403)
-      .takeover(); // Hentikan alur permintaan
+      .takeover();
   }
 };
 
-// Fungsi middleware untuk memeriksa apakah pengguna adalah admin
+// Middleware cek role admin
 const isAdmin = (request, h) => {
-  // Cek apakah request.auth ada dan isAdmin adalah true
   if (!request.auth || !request.auth.isAdmin) {
     return h
       .response({
@@ -49,9 +45,10 @@ const isAdmin = (request, h) => {
         message: 'Akses ditolak. Anda bukan administrator.',
       })
       .code(403)
-      .takeover(); // Hentikan alur permintaan
+      .takeover();
   }
-  return h.continue; // Lanjutkan ke handler berikutnya
+
+  return h.continue;
 };
 
 module.exports = {
