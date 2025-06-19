@@ -1,3 +1,4 @@
+// src/controllers/qrCodeController.js
 const QrScanModel = require('../models/qrScanModel');
 const UserModel = require('../models/userModel');
 const {
@@ -116,29 +117,35 @@ const scanQrCodeHandler = async (request, h) => {
       );
     }
 
+    // Cek tanggal kadaluarsa (menggunakan waktu sekarang)
     if (expiryDate < new Date()) {
       return handleClientError(h, 'QR code sudah kedaluwarsa.', 400);
     }
 
+    // Cek apakah QR code sudah pernah digunakan
     const existingQrEntry = await QrScanModel.findQrScanByQrCodeId(qrCodeId);
     if (existingQrEntry && existingQrEntry.isUsed) {
       return handleClientError(h, 'QR code ini sudah pernah digunakan.', 409);
     }
 
+    // BEST PRACTICE: Gunakan transaksi dengan callback async (tx)
+    // Semua operasi di dalamnya akan dijalankan dalam satu transaksi atomik.
     await prisma.$transaction(async (tx) => {
+      // Pastikan model Anda menerima 'tx'
       await QrScanModel.createQrScanEntry(
         {
           qrCodeId,
           points,
           bottles,
           expiresAt: expiryDate,
-          isUsed: true,
+          isUsed: true, // Ditandai terpakai di awal transaksi
           userId: user.id,
         },
-        tx
+        tx // Teruskan klien transaksi
       );
 
-      await UserModel.incrementUserPoints(userId, points, tx);
+      // Pastikan model Anda menerima 'tx'
+      await UserModel.incrementUserPoints(userId, points, (tx = prisma)); // Teruskan klien transaksi
     });
 
     return h

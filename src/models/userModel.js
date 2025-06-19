@@ -1,3 +1,4 @@
+// src/models/userModel.js
 const prisma = require('../database/prisma');
 
 const UserModel = {
@@ -57,7 +58,7 @@ const UserModel = {
     });
   },
 
-  // Menambahkan poin ke totalPoints pengguna
+  // Menambahkan poin ke totalPoints pengguna (sudah benar menggunakan tx)
   async incrementUserPoints(userId, points, tx = prisma) {
     return await tx.user.update({
       where: { id: userId },
@@ -68,8 +69,9 @@ const UserModel = {
   },
 
   // Mengurangi poin dari totalPoints pengguna
-  async decrementUserPoints(userId, points) {
-    return await prisma.user.update({
+  // BEST PRACTICE: Pastikan juga mendukung transaksi dengan parameter 'tx'
+  async decrementUserPoints(userId, points, tx = prisma) {
+    return await tx.user.update({
       where: { id: userId },
       data: {
         totalPoints: { decrement: points },
