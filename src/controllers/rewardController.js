@@ -11,6 +11,7 @@ const getRewardsHandler = async (request, h) => {
   try {
     const rewards = await RewardModel.findAllRewards();
 
+    console.log('[200] Rewards fetched successfully');
     return h
       .response({
         status: 'success',
@@ -19,6 +20,7 @@ const getRewardsHandler = async (request, h) => {
       })
       .code(200);
   } catch (error) {
+    console.error('[500] Gagal mengambil daftar rewards:', error);
     return handleServerError(h, error, 'Gagal mengambil daftar rewards.');
   }
 };
@@ -34,6 +36,7 @@ const createRewardHandler = async (request, h) => {
       redeemPoint,
     });
 
+    console.log('[201] Reward created:', newReward.id);
     return h
       .response({
         status: 'success',
@@ -42,6 +45,7 @@ const createRewardHandler = async (request, h) => {
       })
       .code(201);
   } catch (error) {
+    console.error('[500] Gagal menambahkan reward:', error);
     return handleServerError(h, error, 'Gagal menambahkan reward.');
   }
 };
@@ -54,6 +58,7 @@ const updateRewardHandler = async (request, h) => {
   try {
     const existingReward = await RewardModel.findRewardById(rewardId);
     if (!existingReward) {
+      console.warn(`[404] Reward not found: ${rewardId}`);
       return handleClientError(h, 'Reward tidak ditemukan.', 404);
     }
 
@@ -63,6 +68,7 @@ const updateRewardHandler = async (request, h) => {
       redeemPoint,
     });
 
+    console.log(`[200] Reward updated: ${rewardId}`);
     return h
       .response({
         status: 'success',
@@ -71,6 +77,7 @@ const updateRewardHandler = async (request, h) => {
       })
       .code(200);
   } catch (error) {
+    console.error('[500] Gagal memperbarui reward:', error);
     return handleServerError(h, error, 'Gagal memperbarui reward.');
   }
 };
@@ -82,10 +89,12 @@ const deleteRewardHandler = async (request, h) => {
   try {
     const existingReward = await RewardModel.findRewardById(rewardId);
     if (!existingReward) {
+      console.warn(`[404] Reward not found: ${rewardId}`);
       return handleClientError(h, 'Reward tidak ditemukan.', 404);
     }
 
     await RewardModel.deleteReward(rewardId);
+    console.log(`[200] Reward deleted: ${rewardId}`);
 
     return h
       .response({
@@ -94,6 +103,7 @@ const deleteRewardHandler = async (request, h) => {
       })
       .code(200);
   } catch (error) {
+    console.error('[500] Gagal menghapus reward:', error);
     return handleServerError(h, error, 'Gagal menghapus reward.');
   }
 };

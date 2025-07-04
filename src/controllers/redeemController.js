@@ -16,15 +16,20 @@ const redeemRewardHandler = async (request, h) => {
   try {
     const user = await UserModel.findUserById(userId);
     if (!user) {
+      console.warn(`[404] User not found: ${userId}`);
       return handleClientError(h, 'Pengguna tidak ditemukan.', 404);
     }
 
     const reward = await RewardModel.findRewardById(rewardId);
     if (!reward) {
+      console.warn(`[404] Reward not found: ${rewardId}`);
       return handleClientError(h, 'Reward tidak ditemukan.', 404);
     }
 
     if (user.totalPoints < reward.redeemPoint) {
+      console.info(
+        `[400] Insufficient points: user ${userId} has ${user.totalPoints}, needs ${reward.redeemPoint}`
+      );
       return handleClientError(
         h,
         'Poin Anda tidak mencukupi untuk menukarkan reward ini.',
@@ -46,6 +51,7 @@ const redeemRewardHandler = async (request, h) => {
       );
     });
 
+    console.log(`[201] Reward redeemed: user ${userId}, reward ${rewardId}`);
     return h
       .response({
         status: 'success',
@@ -53,6 +59,7 @@ const redeemRewardHandler = async (request, h) => {
       })
       .code(201);
   } catch (error) {
+    console.error('[500] Gagal menukarkan reward:', error);
     return handleServerError(h, error, 'Gagal menukarkan reward.');
   }
 };
@@ -64,6 +71,7 @@ const getRedeemHistoryHandler = async (request, h) => {
   try {
     const redeems = await RedeemModel.getUserRedeemHistory(userId);
 
+    console.log(`[200] Fetched redeem history for user ${userId}`);
     return h
       .response({
         status: 'success',
@@ -72,6 +80,7 @@ const getRedeemHistoryHandler = async (request, h) => {
       })
       .code(200);
   } catch (error) {
+    console.error('[500] Gagal mengambil riwayat penukaran:', error);
     return handleServerError(h, error, 'Gagal mengambil riwayat penukaran.');
   }
 };

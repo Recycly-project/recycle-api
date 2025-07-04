@@ -13,9 +13,11 @@ const getUserByIdHandler = async (request, h) => {
   try {
     const user = await UserModel.findUserById(id);
     if (!user) {
+      console.warn(`[404] User not found: ${id}`);
       return handleClientError(h, 'Pengguna tidak ditemukan', 404);
     }
 
+    console.log(`[200] User fetched successfully: ${id}`);
     return h
       .response({
         status: 'success',
@@ -24,6 +26,7 @@ const getUserByIdHandler = async (request, h) => {
       })
       .code(200);
   } catch (error) {
+    console.error(`[500] Failed to get user: ${id}`, error);
     return handleServerError(h, error, 'Gagal mengambil data pengguna.');
   }
 };
@@ -36,6 +39,7 @@ const updateUserHandler = async (request, h) => {
   try {
     const existingUser = await UserModel.findUserById(id);
     if (!existingUser) {
+      console.warn(`[404] User not found for update: ${id}`);
       return handleClientError(h, 'Pengguna tidak ditemukan', 404);
     }
 
@@ -46,6 +50,7 @@ const updateUserHandler = async (request, h) => {
       ktp,
     });
 
+    console.log(`[200] User updated successfully: ${id}`);
     return h
       .response({
         status: 'success',
@@ -54,6 +59,7 @@ const updateUserHandler = async (request, h) => {
       })
       .code(200);
   } catch (error) {
+    console.error(`[500] Failed to update user: ${id}`, error);
     return handleServerError(h, error, 'Gagal memperbarui profil pengguna.');
   }
 };
@@ -65,10 +71,12 @@ const deleteUserHandler = async (request, h) => {
   try {
     const user = await UserModel.findUserById(userId);
     if (!user) {
+      console.warn(`[404] User not found for deletion: ${userId}`);
       return handleClientError(h, 'Pengguna tidak ditemukan', 404);
     }
 
     await UserModel.deleteUser(userId);
+    console.log(`[200] User deleted successfully: ${userId}`);
 
     return h
       .response({
@@ -78,6 +86,7 @@ const deleteUserHandler = async (request, h) => {
       })
       .code(200);
   } catch (error) {
+    console.error(`[500] Failed to delete user: ${userId}`, error);
     return handleServerError(h, error, 'Gagal menghapus pengguna.');
   }
 };
