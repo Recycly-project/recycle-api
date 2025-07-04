@@ -1,4 +1,4 @@
-// Controller QR Code: scan & riwayat
+// Controller QR Code: Scan & Riwayat
 
 const QrScanModel = require('../models/qrScanModel');
 const UserModel = require('../models/userModel');
@@ -6,8 +6,19 @@ const {
   handleServerError,
   handleClientError,
 } = require('../utils/errorHandler');
-const { Jimp } = require('jimp');
-const jsQR = require('jsqr');
+
+const Jimp = require('jimp');
+const QrCode = require('qrcode-reader');
+const {
+  MultiFormatReader,
+  BarcodeFormat,
+  DecodeHintType,
+  RGBLuminanceSource,
+  BinaryBitmap,
+  HybridBinarizer,
+  NotFoundException,
+} = require('@zxing/library');
+
 const fsPromises = require('fs').promises;
 const fs = require('fs');
 const path = require('path');
@@ -17,6 +28,57 @@ const prisma = require('../database/prisma');
 const tempDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir);
+}
+
+// Fallback decoder dengan qrcode-reader
+async function decodeWithQrReader(imagePath) {
+  const image = await Jimp.read(imagePath);
+
+  return new Promise((resolve, reject) => {
+    const qr = new QrCode();
+    qr.callback = (err, value) => {
+      if (err || !value) {
+        return reject(new Error('QR code tidak dapat dibaca'));
+      }
+      resolve(value.result);
+    };
+    qr.decode(image.bitmap);
+  });
+}
+
+// ZXing decoding dengan variasi manipulasi
+async function tryDecodeQRWithVariants(image) {
+  const reader = new MultiFormatReader();
+  const hints = new Map();
+  hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
+  hints.set(DecodeHintType.TRY_HARDER, true);
+  reader.setHints(hints);
+
+  const variants = [];
+
+  const v0 = image.clone().grayscale();
+  const v90 = image.clone().rotate(90).grayscale();
+  const v180 = image.clone().rotate(180).grayscale();
+  const v270 = image.clone().rotate(270).grayscale();
+  const vs = image.clone().scale(2).grayscale();
+
+  variants.push(v0, v90, v180, v270, vs);
+
+  for (const variant of variants) {
+    try {
+      const { data, width, height } = variant.bitmap;
+      const luminance = new RGBLuminanceSource(data, width, height);
+      const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminance));
+      const result = reader.decode(binaryBitmap);
+      if (result) return result;
+    } catch (err) {
+      if (!(err instanceof NotFoundException)) {
+        console.warn('Unexpected decoding error:', err.message);
+      }
+    }
+  }
+
+  throw new NotFoundException('Tidak ada QR code yang terdeteksi di gambar.');
 }
 
 // Handler untuk scan QR code
@@ -42,31 +104,29 @@ const scanQrCodeHandler = async (request, h) => {
     await fsPromises.writeFile(tempPath, payload.qrCodeImage._data);
 
     let qrData = null;
+
     try {
       const image = await Jimp.read(tempPath);
-      const { data, width, height } = image.bitmap;
-      const code = jsQR(new Uint8ClampedArray(data), width, height);
+      let decodedResult;
 
-      if (code && code.data) {
-        qrData = JSON.parse(code.data);
-      } else {
-        return handleClientError(h, 'QR code tidak valid.', 400);
+      try {
+        // ZXing decoder utama
+        decodedResult = await tryDecodeQRWithVariants(image);
+        qrData = JSON.parse(decodedResult.getText());
+      } catch (zxingErr) {
+        console.warn('ZXing gagal:', zxingErr.message);
+        // Fallback ke qrcode-reader
+        console.warn('ZXing gagal, mencoba fallback qrcode-reader...');
+        const fallbackText = await decodeWithQrReader(tempPath);
+        qrData = JSON.parse(fallbackText);
       }
-    } catch (jimpOrJsQRError) {
-      console.error('Error processing QR code image:', jimpOrJsQRError);
-
-      if (
-        jimpOrJsQRError.message &&
-        jimpOrJsQRError.message.includes('Could not find MIME for Buffer')
-      ) {
-        return handleClientError(
-          h,
-          'Format file tidak dikenali. Gunakan PNG/JPEG yang valid.',
-          400
-        );
-      }
-
-      throw jimpOrJsQRError;
+    } catch (decodeError) {
+      console.error('Error processing QR code image:', decodeError);
+      return handleClientError(
+        h,
+        'Gagal membaca QR code. Pastikan gambar valid.',
+        400
+      );
     } finally {
       if (tempPath && fs.existsSync(tempPath)) {
         await fsPromises
@@ -113,7 +173,7 @@ const scanQrCodeHandler = async (request, h) => {
         tx
       );
 
-      await UserModel.incrementUserPoints(userId, points, (tx = prisma));
+      await UserModel.incrementUserPoints(userId, points, tx);
     });
 
     return h
