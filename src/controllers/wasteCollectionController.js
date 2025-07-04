@@ -25,10 +25,12 @@ const createWasteCollectionHandler = async (request, h) => {
   try {
     const user = await UserModel.findUserById(userId);
     if (!user) {
+      console.warn(`[404] User not found for waste collection: ${userId}`);
       return handleClientError(h, 'Pengguna tidak ditemukan', 404);
     }
 
     if (!payload || !payload.image) {
+      console.warn(`[400] No image uploaded by user: ${userId}`);
       return handleClientError(h, 'Gambar tidak ditemukan.', 400);
     }
 
@@ -38,13 +40,16 @@ const createWasteCollectionHandler = async (request, h) => {
       `${Date.now()}-${payload.image.hapi.filename}`
     );
     await fsPromises.writeFile(tempPath, payload.image._data);
+    console.log(`[201] Image uploaded to temp: ${tempPath}`);
 
     // Kirim ke ML service
     const { label, points } = await sendImageToML(tempPath);
+    console.log(`[200] ML result - label: ${label}, points: ${points}`);
 
     // Validasi hasil ML
     if (label === 'Bottle Damage' || label === 'Non Bottle') {
       await fsPromises.unlink(tempPath);
+      console.warn(`[400] Invalid label from ML: ${label}`);
       return handleClientError(
         h,
         label === 'Bottle Damage'
@@ -68,6 +73,7 @@ const createWasteCollectionHandler = async (request, h) => {
 
     await UserModel.incrementUserPoints(userId, points);
 
+    console.log(`[201] Waste collection recorded for user: ${userId}`);
     return h
       .response({
         status: 'success',
@@ -76,6 +82,10 @@ const createWasteCollectionHandler = async (request, h) => {
       })
       .code(201);
   } catch (error) {
+    console.error(
+      `[500] Failed to process waste collection for user: ${userId}`,
+      error
+    );
     return handleServerError(h, error, 'Gagal memproses koleksi sampah.');
   }
 };
@@ -87,6 +97,7 @@ const getUserWasteCollectionsHandler = async (request, h) => {
   try {
     const user = await UserModel.findUserById(userId);
     if (!user) {
+      console.warn(`[404] User not found for fetching collections: ${userId}`);
       return handleClientError(h, 'Pengguna tidak ditemukan', 404);
     }
 
@@ -94,6 +105,7 @@ const getUserWasteCollectionsHandler = async (request, h) => {
       userId
     );
 
+    console.log(`[200] Waste collections fetched for user: ${userId}`);
     return h
       .response({
         status: 'success',
@@ -102,6 +114,10 @@ const getUserWasteCollectionsHandler = async (request, h) => {
       })
       .code(200);
   } catch (error) {
+    console.error(
+      `[500] Failed to fetch waste collections for user: ${userId}`,
+      error
+    );
     return handleServerError(
       h,
       error,
