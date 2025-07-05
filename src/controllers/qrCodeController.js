@@ -30,6 +30,12 @@ if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir);
 }
 
+// Validasi ukuran maksimal 1MB
+function isValidSize(buffer) {
+  const maxSize = 1 * 1024 * 1024; // 1MB
+  return buffer.length <= maxSize;
+}
+
 // Fallback decoder menggunakan qrcode-reader
 async function decodeWithQrReader(imagePath) {
   const image = await Jimp.read(imagePath);
@@ -114,17 +120,32 @@ const scanQrCodeHandler = async (request, h) => {
       return handleClientError(h, 'Gambar QR code tidak ditemukan.', 400);
     }
 
+    const buffer = payload.qrCodeImage._data;
+
+    if (!isValidSize(buffer)) {
+      console.warn(
+        `Ukuran gambar melebihi batas 1MB untuk user ID ${userId} [400]`
+      );
+      return handleClientError(h, 'Ukuran gambar melebihi 1MB.', 400);
+    }
+
     tempPath = path.join(
       tempDir,
       `${Date.now()}-${payload.qrCodeImage.hapi.filename}`
     );
-    await fsPromises.writeFile(tempPath, payload.qrCodeImage._data);
+    await fsPromises.writeFile(tempPath, buffer);
 
     let qrData = null;
     let decoderUsed = 'zxing';
 
     try {
-      const image = await Jimp.read(tempPath);
+      let image = await Jimp.read(tempPath);
+
+      if (image.getWidth() > 800) {
+        image = image.resize(800, Jimp.AUTO);
+        await image.writeAsync(tempPath); // overwrite with resized
+        console.info(`Gambar di-resize ke lebar 800px`);
+      }
 
       try {
         const decodedResult = await tryDecodeQRWithVariants(image);
@@ -217,7 +238,7 @@ const scanQrCodeHandler = async (request, h) => {
   }
 };
 
-// Handler untuk riwayat pemindaian
+// Handler riwayat scan
 const getQrCodeHistoryHandler = async (request, h) => {
   const { id: userId } = request.params;
 
